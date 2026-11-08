@@ -1,4 +1,5 @@
 import { Icon } from "./ui";
+import { classes } from "../lib/livability";
 
 const regions = [
   "50,12 76,5 97,21 90,48 64,55 43,37", "97,21 128,10 150,32 139,59 112,65 90,48",
@@ -25,6 +26,37 @@ export function BogorMap({ compact = false, selected = true }: { compact?: boole
   </div>;
 }
 
-export function ScoreLegend() {
-  return <div className="legend"><div className="legend-title"><span>Indeks kelayakhunian</span><Icon name="info" size={15}/></div><div className="legend-bar"/><div className="legend-values"><span>0,00</span><span>0,20</span><span>0,40</span><span>0,60</span><span>0,80</span><span>1,00</span></div><div className="legend-note"><i/>Data indeks 2026</div></div>;
+export function ScoreLegend({ title = "Indeks kelayakhunian" }: { title?: string }) {
+  return (
+    <div className="legend">
+      <div className="legend-title">
+        <span>{title}</span>
+        <Icon name="info" size={15} />
+      </div>
+      <div className="legend-bar" />
+      <div className="legend-values">
+        <span>0,00</span>
+        <span>0,20</span>
+        <span>0,40</span>
+        <span>0,60</span>
+        <span>0,80</span>
+        <span>1,00</span>
+      </div>
+      <div className="legend-classes">
+        {classes.map((c) => (
+          <div key={c.label}>
+            <span>
+              <i style={{ background: c.color }} />
+              {c.label}
+            </span>
+            <small>{c.range}</small>
+          </div>
+        ))}
+      </div>
+      <div className="legend-note">
+        <i />
+        68 kelurahan · WGS 84 (EPSG:4326)
+      </div>
+    </div>
+  );
 }

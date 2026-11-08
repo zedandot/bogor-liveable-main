@@ -1,37 +1,54 @@
 "use client";
 
-// WBS 1.5.1 + 1.5.3 — Map engine Leaflet & rendering choropleth Livability Index.
-// Dimuat hanya di sisi klien (lihat dynamic import { ssr: false } di app/peta/page.tsx).
+// WBS 1.5.1 + 1.5.2 + 1.5.3 — Map engine Leaflet, basemap switcher (4 mode),
+// label nama daerah (68 kelurahan & 6 kecamatan), dan choropleth 5 kelas.
 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useRef } from "react";
-import type { Feature, FeatureCollection, Geometry } from "geojson";
+import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
 import { classify, fmt, type KelurahanProps, type ThemeKey } from "../lib/livability";
 
-export type OverlayKey = "faskes" | "jangkauan" | "jalan" | "kecamatan";
-export type Basemap = "light" | "satellite";
+export type OverlayKey = "labels" | "faskes" | "jangkauan" | "sekolah" | "jalan" | "kecamatan";
+export type Basemap = "light" | "satellite" | "osm" | "topo";
 
 type Props = {
   data: FeatureCollection<Geometry, KelurahanProps>;
   theme: ThemeKey;
   overlays: Record<OverlayKey, boolean>;
   basemap: Basemap;
+  fillOpacity: number;
   selectedKode: string | null;
   visibleKodes: Set<string> | null; // null = semua tampil
   onSelect: (kode: string | null) => void;
 };
 
-const BASEMAPS: Record<Basemap, { url: string; attribution: string; maxZoom: number }> = {
+const BASEMAPS: Record<
+  Basemap,
+  { url: string; labelUrl?: string; attribution: string; maxZoom: number }
+> = {
   light: {
     url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 19,
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    labelUrl: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
     attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics",
     maxZoom: 19,
+  },
+  osm: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  topo: {
+    url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    attribution:
+      'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+    maxZoom: 17,
   },
 };
 
@@ -59,17 +76,64 @@ const ROAD_WEIGHT: Record<string, number> = {
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-export default function LeafletMap({ data, theme, overlays, basemap, selectedKode, visibleKodes, onSelect }: Props) {
+// Hitung titik pusat poligon terbesar agar label nama daerah jatuh pas di tengah wilayah
+function featureCenterLatLng(geom: Geometry): [number, number] {
+  const rings: Position[][] =
+    geom.type === "Polygon"
+      ? [geom.coordinates[0]]
+      : geom.type === "MultiPolygon"
+      ? geom.coordinates.map((p) => p[0])
+      : [];
+
+  let bestLat = -6.597;
+  let bestLon = 106.799;
+  let bestArea = -1;
+
+  for (const ring of rings) {
+    let area = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [x0, y0] = ring[j];
+      const [x1, y1] = ring[i];
+      const f = x0 * y1 - x1 * y0;
+      area += f;
+      cx += (x0 + x1) * f;
+      cy += (y0 + y1) * f;
+    }
+    const absA = Math.abs(area) * 0.5;
+    if (absA > bestArea && Math.abs(area) > 1e-11) {
+      bestArea = absA;
+      bestLon = cx / (3 * area);
+      bestLat = cy / (3 * area);
+    }
+  }
+  return [bestLat, bestLon];
+}
+
+export default function LeafletMap({
+  data,
+  theme,
+  overlays,
+  basemap,
+  fillOpacity,
+  selectedKode,
+  visibleKodes,
+  onSelect,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const baseLayerRef = useRef<L.TileLayer | null>(null);
+  const baseLayerRef = useRef<L.LayerGroup | null>(null);
   const choroplethRef = useRef<L.GeoJSON<KelurahanProps> | null>(null);
+  const labelGroupRef = useRef<L.LayerGroup | null>(null);
   const overlayRefs = useRef<Partial<Record<OverlayKey, L.Layer>>>({});
   const overlayLoading = useRef<Partial<Record<OverlayKey, Promise<L.Layer>>>>({});
 
-  // Nilai terbaru disimpan di ref agar handler Leaflet tidak memakai closure basi.
-  const state = useRef({ theme, selectedKode, visibleKodes, onSelect });
-  state.current = { theme, selectedKode, visibleKodes, onSelect };
+  const state = useRef({ theme, fillOpacity, selectedKode, visibleKodes, onSelect });
+  state.current = { theme, fillOpacity, selectedKode, visibleKodes, onSelect };
+
+  const stateOverlays = useRef(overlays);
+  stateOverlays.current = overlays;
 
   // ---- Inisialisasi peta (sekali) ------------------------------------------
   useEffect(() => {
@@ -78,28 +142,28 @@ export default function LeafletMap({ data, theme, overlays, basemap, selectedKod
     L.control.zoom({ position: "bottomright" }).addTo(map);
     L.control.scale({ position: "bottomright", imperial: false }).addTo(map);
 
-    // Pane untuk mengatur urutan tumpukan layer (z-index).
     map.createPane("choropleth").style.zIndex = "400";
     map.createPane("jangkauan").style.zIndex = "410";
     map.createPane("jalan").style.zIndex = "420";
     map.createPane("batas").style.zIndex = "430";
+    map.createPane("regionLabels").style.zIndex = "450";
     map.getPane("jangkauan")!.style.pointerEvents = "none";
     map.getPane("jalan")!.style.pointerEvents = "none";
     map.getPane("batas")!.style.pointerEvents = "none";
 
     const styleFor = (f?: Feature<Geometry, KelurahanProps>): L.PathOptions => {
       if (!f) return {};
-      const { theme, selectedKode, visibleKodes } = state.current;
+      const { theme, fillOpacity, selectedKode, visibleKodes } = state.current;
       const p = f.properties;
       const selected = p.kode === selectedKode;
       const visible = !visibleKodes || visibleKodes.has(p.kode);
       return {
         pane: "choropleth",
         fillColor: classify(p[theme]).color,
-        fillOpacity: visible ? 0.78 : 0.12,
+        fillOpacity: visible ? fillOpacity : 0.1,
         color: selected ? "#173b38" : "#ffffff",
-        weight: selected ? 3 : 1,
-        opacity: visible ? 1 : 0.4,
+        weight: selected ? 3 : 1.1,
+        opacity: visible ? 1 : 0.35,
       };
     };
 
@@ -107,10 +171,13 @@ export default function LeafletMap({ data, theme, overlays, basemap, selectedKod
       style: styleFor as L.StyleFunction<KelurahanProps>,
       onEachFeature: (feature, layer) => {
         const p = feature.properties;
-        layer.bindTooltip(() => {
-          const score = p[state.current.theme];
-          return `<b>${escapeHtml(p.kelurahan)}</b><br/><span>${escapeHtml(p.kecamatan)}</span><br/>Skor ${fmt(score)} · ${classify(score).label}`;
-        }, { sticky: true, direction: "top", className: "rb-tooltip" });
+        layer.bindTooltip(
+          () => {
+            const score = p[state.current.theme];
+            return `<b>${escapeHtml(p.kelurahan)}</b><br/><span>${escapeHtml(p.kecamatan)} · #${p.peringkat}</span><br/>Skor ${fmt(score)} · ${classify(score).label}`;
+          },
+          { sticky: true, direction: "top", className: "rb-tooltip" }
+        );
         layer.on({
           mouseover: (e) => {
             const l = e.target as L.Path;
@@ -123,11 +190,11 @@ export default function LeafletMap({ data, theme, overlays, basemap, selectedKod
     }).addTo(map);
 
     choroplethRef.current = choropleth;
+    labelGroupRef.current = L.layerGroup([], { pane: "regionLabels" });
     map.fitBounds(choropleth.getBounds(), { padding: [20, 20] });
     map.setMaxBounds(choropleth.getBounds().pad(0.6));
     mapRef.current = map;
 
-    // Kontainer bisa berubah ukuran (panel detail buka/tutup) → hitung ulang ukuran peta.
     const ro = new ResizeObserver(() => map.invalidateSize());
     ro.observe(containerRef.current);
 
@@ -137,21 +204,36 @@ export default function LeafletMap({ data, theme, overlays, basemap, selectedKod
       mapRef.current = null;
       choroplethRef.current = null;
       baseLayerRef.current = null;
+      labelGroupRef.current = null;
       overlayRefs.current = {};
       overlayLoading.current = {};
     };
   }, [data]);
 
-  // ---- Basemap switcher ----------------------------------------------------
+  // ---- Basemap switcher (Terang / Satelit / Jalan OSM / Topografi) ----------
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     baseLayerRef.current?.remove();
     const cfg = BASEMAPS[basemap];
-    baseLayerRef.current = L.tileLayer(cfg.url, { attribution: cfg.attribution, maxZoom: cfg.maxZoom, subdomains: "abcd" }).addTo(map);
+    const group = L.layerGroup();
+    L.tileLayer(cfg.url, {
+      attribution: cfg.attribution,
+      maxZoom: cfg.maxZoom,
+      subdomains: "abcd",
+    }).addTo(group);
+    if (cfg.labelUrl) {
+      L.tileLayer(cfg.labelUrl, {
+        maxZoom: cfg.maxZoom,
+        subdomains: "abcd",
+        opacity: 0.85,
+      }).addTo(group);
+    }
+    group.addTo(map);
+    baseLayerRef.current = group;
   }, [basemap, data]);
 
-  // ---- Restyle choropleth saat tema / filter / seleksi berubah --------------
+  // ---- Restyle choropleth saat tema / transparansi / filter / seleksi berubah
   useEffect(() => {
     const layer = choroplethRef.current;
     if (!layer) return;
@@ -162,7 +244,41 @@ export default function LeafletMap({ data, theme, overlays, basemap, selectedKod
         if (gl.feature?.properties.kode === selectedKode) gl.bringToFront();
       });
     }
-  }, [theme, visibleKodes, selectedKode]);
+  }, [theme, fillOpacity, visibleKodes, selectedKode]);
+
+  // ---- Render label nama 68 kelurahan di atas poligon ----------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    const labelGroup = labelGroupRef.current;
+    if (!map || !labelGroup) return;
+
+    labelGroup.clearLayers();
+    if (!overlays.labels) {
+      map.removeLayer(labelGroup);
+      return;
+    }
+
+    for (const f of data.features) {
+      const p = f.properties;
+      if (visibleKodes && !visibleKodes.has(p.kode)) continue;
+      const [lat, lon] = featureCenterLatLng(f.geometry);
+      const isSelected = p.kode === selectedKode;
+      const score = fmt(p[theme]);
+
+      const marker = L.marker([lat, lon], {
+        pane: "regionLabels",
+        icon: L.divIcon({
+          className: `kel-label ${isSelected ? "kel-label-active" : ""}`,
+          html: `<span><b>${escapeHtml(p.kelurahan)}</b><small>${score}</small></span>`,
+          iconSize: [0, 0],
+        }),
+      });
+      marker.on("click", () => state.current.onSelect(p.kode));
+      marker.addTo(labelGroup);
+    }
+
+    labelGroup.addTo(map);
+  }, [data, overlays.labels, theme, selectedKode, visibleKodes]);
 
   // ---- Fly-to wilayah terpilih ---------------------------------------------
   useEffect(() => {
@@ -190,11 +306,11 @@ export default function LeafletMap({ data, theme, overlays, basemap, selectedKod
     if (bounds.isValid()) map.flyToBounds(bounds, { padding: [40, 40], duration: 0.8 });
   }, [visibleKodes]);
 
-  // ---- Layer pendukung (dimuat saat pertama kali dinyalakan) ----------------
+  // ---- Layer pendukung (faskes, jangkauan, sekolah, jalan, kecamatan) ------
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    (Object.keys(overlays) as OverlayKey[]).forEach(async (key) => {
+    (["faskes", "jangkauan", "sekolah", "jalan", "kecamatan"] as OverlayKey[]).forEach(async (key) => {
       const existing = overlayRefs.current[key];
       if (!overlays[key]) {
         if (existing) map.removeLayer(existing);
@@ -207,13 +323,9 @@ export default function LeafletMap({ data, theme, overlays, basemap, selectedKod
       overlayLoading.current[key] ??= buildOverlay(key);
       const layer = await overlayLoading.current[key]!;
       overlayRefs.current[key] = layer;
-      // Periksa ulang: peta masih ada & layer masih diminta aktif.
       if (mapRef.current === map && stateOverlays.current[key]) layer.addTo(map);
     });
   }, [overlays, data]);
-
-  const stateOverlays = useRef(overlays);
-  stateOverlays.current = overlays;
 
   return <div ref={containerRef} className="leaflet-host" aria-label="Peta interaktif kelayakhunian Kota Bogor" />;
 }
@@ -226,6 +338,8 @@ async function fetchJson(name: string) {
 
 async function buildOverlay(key: OverlayKey): Promise<L.Layer> {
   switch (key) {
+    case "labels":
+      return L.layerGroup();
     case "faskes": {
       const fc = await fetchJson("faskes");
       return L.geoJSON(fc, {
@@ -236,18 +350,40 @@ async function buildOverlay(key: OverlayKey): Promise<L.Layer> {
         onEachFeature: (f, layer) => {
           const p = f.properties ?? {};
           const s = FASKES_STYLE[p.jenis] ?? FASKES_STYLE.klinik;
-          layer.bindPopup(`<b>${escapeHtml(p.nama ?? "-")}</b><br/>${s.label}<br/><small>${escapeHtml(p.kelurahan ?? "")}, ${escapeHtml(p.kecamatan ?? "")}</small>`);
+          layer.bindPopup(
+            `<b>${escapeHtml(p.nama ?? "-")}</b><br/>${s.label}<br/><small>${escapeHtml(p.kelurahan ?? "")}, ${escapeHtml(p.kecamatan ?? "")}</small>`
+          );
         },
       });
     }
     case "jangkauan": {
       const fc = await fetchJson("JANGKAUAN_PUSKESMAS_RUMAHSAKIT");
-      // Urutan gambar: RS (paling luas) di bawah, blank spot di atas.
       const order = ["rs", "klinik", "puskesmas", "blank_spot"];
       fc.features.sort((a, b) => order.indexOf(a.properties?.kode) - order.indexOf(b.properties?.kode));
       return L.geoJSON(fc, {
         pane: "jangkauan",
         style: (f) => ({ ...JANGKAUAN_STYLE[f?.properties?.kode] }),
+      });
+    }
+    case "sekolah": {
+      const fc = await fetchJson("sekolah");
+      const SEKOLAH_STYLE: Record<string, { color: string; label: string }> = {
+        sd: { color: "#d8a85f", label: "SD" },
+        smp: { color: "#4c8e72", label: "SMP" },
+        sma_smk: { color: "#7a5ea8", label: "SMA/SMK" },
+      };
+      return L.geoJSON(fc, {
+        pointToLayer: (f, latlng) => {
+          const s = SEKOLAH_STYLE[f.properties?.jenis] ?? SEKOLAH_STYLE.sd;
+          return L.circleMarker(latlng, { radius: 4, color: "#fff", weight: 1, fillColor: s.color, fillOpacity: 0.9 });
+        },
+        onEachFeature: (f, layer) => {
+          const p = f.properties ?? {};
+          const s = SEKOLAH_STYLE[p.jenis] ?? SEKOLAH_STYLE.sd;
+          layer.bindPopup(
+            `<b>${escapeHtml(p.nama ?? "-")}</b><br/>${s.label} · NPSN ${p.npsn ?? "-"}<br/><small>${escapeHtml(p.kelurahan ?? "")}, ${escapeHtml(p.kecamatan ?? "")}</small>`
+          );
+        },
       });
     }
     case "jalan": {
@@ -262,11 +398,27 @@ async function buildOverlay(key: OverlayKey): Promise<L.Layer> {
     }
     case "kecamatan": {
       const fc = await fetchJson("kecamatan");
-      return L.geoJSON(fc, {
+      const group = L.layerGroup();
+      L.geoJSON(fc, {
         pane: "batas",
         style: { color: "#173b38", weight: 2.2, fill: false, dashArray: "6 4" },
-      });
+      }).addTo(group);
+
+      // Tambahkan label nama 6 kecamatan
+      for (const f of fc.features) {
+        const kecName = f.properties?.kecamatan ?? "";
+        const [lat, lon] = featureCenterLatLng(f.geometry);
+        L.marker([lat, lon], {
+          pane: "batas",
+          interactive: false,
+          icon: L.divIcon({
+            className: "kec-label",
+            html: `<span>${escapeHtml(kecName)}</span>`,
+            iconSize: [0, 0],
+          }),
+        }).addTo(group);
+      }
+      return group;
     }
   }
 }
-

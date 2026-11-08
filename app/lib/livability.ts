@@ -20,14 +20,24 @@ export type KelurahanProps = {
   n_klinik: number;
   n_rs: number;
   cakupan_faskes_pct: number;
+  cakupan_puskesmas_pct: number;
+  cakupan_rs_pct: number;
   jarak_puskesmas_m: number;
+  jarak_klinik_m: number;
   jarak_rs_m: number;
   n_sd: number;
   n_smp: number;
   n_sma_smk: number;
+  sekolah_per_10rb: number;
+  jarak_sekolah_m: number;
   kepadatan_jiwa_km2: number;
-  vegetasi_pct: number;
+  kriminalitas_per_10rb: number;
+  perdagangan_pct: number;
+  industri_pct: number;
   badan_jalan_pct: number;
+  kerapatan_jalan_km_km2: number;
+  vegetasi_pct: number;
+  vegetasi_m2_per_jiwa: number;
 };
 
 export type ThemeKey =
@@ -71,4 +81,3 @@ export const fmt = (n: number, digits = 2) =>
   n.toLocaleString("id-ID", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
 export const slugify = (name: string) => name.toLowerCase().trim().replace(/\s+/g, "-");
-
