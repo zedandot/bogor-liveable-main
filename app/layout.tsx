@@ -12,7 +12,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="id" className="h-full antialiased">
+    <html
+      lang="id"
+      className="h-full antialiased"
+      data-splash="active"
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col">
         <SplashLoader />
         <div className="rb-site-stage">{children}</div>
