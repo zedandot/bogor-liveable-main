@@ -1,29 +1,186 @@
+"use client";
+
+import { useState } from "react";
+import { bogorSvgPaths } from "../lib/bogor-svg-paths";
+import { kelurahanData } from "../kelurahan-data";
+import { classes, scoreToColor } from "../lib/livability";
 import { Icon } from "./ui";
-import { classes } from "../lib/livability";
 
-const regions = [
-  "50,12 76,5 97,21 90,48 64,55 43,37", "97,21 128,10 150,32 139,59 112,65 90,48",
-  "150,32 180,20 207,39 195,69 160,76 139,59", "43,37 64,55 60,88 30,98 14,72",
-  "64,55 90,48 112,65 105,98 75,108 60,88", "112,65 139,59 160,76 150,106 125,116 105,98",
-  "160,76 195,69 218,93 206,123 174,132 150,106", "30,98 60,88 75,108 64,138 34,147 15,123",
-  "75,108 105,98 125,116 112,146 80,153 64,138", "125,116 150,106 174,132 156,160 129,166 112,146",
-  "34,147 64,138 80,153 70,182 43,194 21,171", "80,153 112,146 129,166 113,194 82,207 70,182",
-  "129,166 156,160 177,185 160,210 130,218 113,194", "177,185 203,174 222,200 203,225 174,232 160,210",
-];
-const colors = ["#8fbf83","#5f9f78","#3f806f","#b8cf8b","#6ca77e","#2e7468","#9fc68a","#d5d99b","#7bb184","#4c8e72","#c4d58f","#89b77f","#5a9b76","#a9c987"];
+const kelurahanBySlug = new Map(
+  kelurahanData.map((k) => [
+    k.kelurahan.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    k,
+  ])
+);
 
-export function BogorMap({ compact = false, selected = true }: { compact?: boolean; selected?: boolean }) {
-  return <div className={`map-canvas ${compact ? "map-compact" : ""}`}>
-    <div className="map-paper"/>
-    <svg className="bogor-shape" viewBox="0 0 240 245" role="img" aria-label="Ilustrasi peta choropleth Kota Bogor">
-      <defs><filter id="shadow"><feDropShadow dx="0" dy="5" stdDeviation="5" floodOpacity=".18"/></filter></defs>
-      <g filter="url(#shadow)">{regions.map((points, i)=><polygon key={points} points={points} fill={colors[i]} stroke="#f6f5ed" strokeWidth="2.2" className={selected && i === 1 ? "map-selected" : ""}/>)}</g>
-      <g className="map-roads"><path d="M24 170Q80 120 205 44"/><path d="M35 55Q105 100 205 205"/><path d="M72 10Q95 85 82 207"/><path d="M150 30Q130 110 174 232"/></g>
-      <g className="map-points"><circle cx="116" cy="72" r="3"/><circle cx="157" cy="118" r="3"/><circle cx="72" cy="164" r="3"/><circle cx="185" cy="196" r="3"/><path d="M116 65v14M109 72h14"/><path d="M157 111v14M150 118h14"/></g>
-    </svg>
-    <div className="map-label label-one">Bogor Utara</div><div className="map-label label-two">Bogor Tengah</div><div className="map-label label-three">Bogor Selatan</div>
-    {!compact && <><div className="map-zoom"><button aria-label="Perbesar">+</button><button aria-label="Perkecil">−</button></div><div className="map-attribution">© OpenStreetMap contributors</div></>}
-  </div>;
+export type MapDimensionKey =
+  | "livable"
+  | "kesehatan"
+  | "pendidikan"
+  | "lingkungan"
+  | "transportasi"
+  | "ekonomi"
+  | "sosial";
+
+function getDimensionScore(
+  slug: string,
+  dimension: MapDimensionKey,
+  customScores?: Record<string, number>
+): number {
+  if (customScores && slug in customScores) {
+    return customScores[slug];
+  }
+  const k = kelurahanBySlug.get(slug);
+  if (!k) return 0.5;
+  switch (dimension) {
+    case "kesehatan":
+      return k.skor_kesehatan;
+    case "pendidikan":
+      return k.skor_pendidikan;
+    case "lingkungan":
+      return k.skor_lingkungan;
+    case "transportasi":
+      return k.skor_transportasi;
+    case "ekonomi":
+      return k.skor_ekonomi;
+    case "sosial":
+      return k.skor_sosial;
+    default:
+      return k.skor_livable;
+  }
+}
+
+export function BogorMap({
+  compact = false,
+  selected = true,
+  selectedSlug = "pabaton",
+  onSelect,
+  dimension = "livable",
+  customScores,
+}: {
+  compact?: boolean;
+  selected?: boolean;
+  selectedSlug?: string;
+  onSelect?: (slug: string) => void;
+  dimension?: MapDimensionKey;
+  customScores?: Record<string, number>;
+}) {
+  const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
+  const activeSlug = hoveredSlug ?? (selected ? selectedSlug : null);
+  const activeItem = activeSlug
+    ? bogorSvgPaths.find((p) => p.slug === activeSlug)
+    : null;
+  const activeScore = activeSlug
+    ? getDimensionScore(activeSlug, dimension, customScores)
+    : null;
+
+  return (
+    <div className={`map-canvas ${compact ? "map-compact" : ""}`}>
+      <div className="map-paper" />
+      <svg
+        className="bogor-shape"
+        viewBox="0 0 260 260"
+        role="img"
+        aria-label="Peta choropleth interaktif 68 kelurahan Kota Bogor"
+      >
+        <defs>
+          <filter id="bogor-drop-shadow" x="-12%" y="-12%" width="124%" height="124%">
+            <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#0e3b34" floodOpacity=".18" />
+          </filter>
+          <radialGradient id="beacon-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#fffefa" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#0e5b53" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* Subtle topographic compass rings */}
+        <g className="map-topo-rings" aria-hidden="true">
+          <circle cx="136" cy="128" r="56" />
+          <circle cx="136" cy="128" r="92" />
+          <circle cx="136" cy="128" r="122" />
+          <line x1="136" y1="6" x2="136" y2="254" />
+          <line x1="12" y1="128" x2="248" y2="128" />
+        </g>
+
+        {/* Real 68 kelurahan polygons */}
+        <g filter="url(#bogor-drop-shadow)">
+          {bogorSvgPaths.map((item, idx) => {
+            const score = getDimensionScore(item.slug, dimension, customScores);
+            const fill = scoreToColor(score);
+            const isSelected = selected && item.slug === selectedSlug;
+            const isHovered = item.slug === hoveredSlug;
+            return (
+              <path
+                key={item.kode}
+                d={item.d}
+                fill={fill}
+                stroke={isSelected || isHovered ? "#0b3f39" : "#f6f5ed"}
+                strokeWidth={isSelected || isHovered ? 2.1 : 0.85}
+                style={{
+                  animationDelay: `${Math.min(idx * 12, 480)}ms`,
+                }}
+                className={`bogor-kel-path ${
+                  isSelected ? "map-selected" : ""
+                } ${isHovered ? "map-hovered" : ""}`}
+                onMouseEnter={() => setHoveredSlug(item.slug)}
+                onMouseLeave={() => setHoveredSlug(null)}
+                onClick={() => onSelect?.(item.slug)}
+              />
+            );
+          })}
+        </g>
+
+        {/* Animated Ciliwung-Cisadane arterial corridors */}
+        <g className="map-roads" pointerEvents="none">
+          <path d="M58 76 Q112 104 148 124 T204 221" />
+          <path d="M112 31 Q136 86 134 132 T130 188" />
+          <path d="M88 100 Q133 118 178 153" />
+        </g>
+
+        {/* Active kelurahan beacon */}
+        {activeItem && (
+          <g
+            className="map-active-beacon"
+            transform={`translate(${activeItem.cx}, ${activeItem.cy})`}
+            pointerEvents="none"
+          >
+            <circle r="11" className="beacon-pulse" />
+            <circle r="4" fill="#fffefa" stroke="#0e5b53" strokeWidth="2" />
+          </g>
+        )}
+      </svg>
+
+      {/* District callout pills */}
+      <div className="map-label label-one">Bogor Utara</div>
+      <div className="map-label label-two">Bogor Tengah</div>
+      <div className="map-label label-three">Bogor Selatan</div>
+
+      {/* Live interactive floating badge when hovering/selecting */}
+      {activeItem && activeScore !== null && (
+        <div className="map-live-pill" aria-live="polite">
+          <span
+            className="map-live-dot"
+            style={{ background: scoreToColor(activeScore) }}
+          />
+          <div>
+            <b>{activeItem.name}</b>
+            <small>{activeItem.district}</small>
+          </div>
+          <strong>{activeScore.toFixed(2).replace(".", ",")}</strong>
+        </div>
+      )}
+
+      {!compact && (
+        <>
+          <div className="map-zoom">
+            <button aria-label="Perbesar">+</button>
+            <button aria-label="Perkecil">−</button>
+          </div>
+          <div className="map-attribution">68 Kelurahan · Geometri RBI BIG</div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function ScoreLegend({ title = "Indeks kelayakhunian" }: { title?: string }) {

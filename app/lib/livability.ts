@@ -81,3 +81,7 @@ export const fmt = (n: number, digits = 2) =>
   n.toLocaleString("id-ID", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
 export const slugify = (name: string) => name.toLowerCase().trim().replace(/\s+/g, "-");
+
+export const scoreToColor = (score: number) => classify(score).color;
+export const scoreToClass = (score: number) => classify(score).label;
+export const toSlug = slugify;
