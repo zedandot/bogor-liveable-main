@@ -51,13 +51,18 @@ html, body {
   z-index: 1;
   inset: 0;
   height: 100%;
-  background: url("/bogor-watercolor.png") center 22% / cover no-repeat;
   overflow: hidden;
-  will-change: transform;
-  animation: hero-panorama-breathe 26s ease-in-out infinite alternate;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
+}
+
+.hero-city-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  display: block;
+  z-index: 0;
 }
 
 /* Feathered editorial halo behind text so the watercolor sky & Gunung Salak remain visible all the way up */
@@ -65,63 +70,22 @@ html, body {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 1;
   background:
     radial-gradient(
       ellipse 52% 38% at 50% 21%,
-      rgba(255, 254, 250, 0.92) 0%,
-      rgba(255, 254, 250, 0.76) 54%,
+      rgba(255, 254, 250, 0.94) 0%,
+      rgba(255, 254, 250, 0.8) 54%,
       rgba(255, 254, 250, 0) 100%
     ),
     linear-gradient(
       180deg,
-      rgba(255, 254, 250, 0.58) 0%,
-      rgba(255, 254, 250, 0.12) 26%,
+      rgba(255, 254, 250, 0.62) 0%,
+      rgba(255, 254, 250, 0.14) 26%,
       rgba(255, 254, 250, 0) 58%,
       rgba(23, 59, 56, 0.18) 100%
     );
   pointer-events: none;
-}
-
-/* Subtle floating morning mist at mountain base */
-.hero-city-art:after {
-  content: "";
-  position: absolute;
-  left: -10%;
-  right: -10%;
-  top: 34%;
-  height: 28%;
-  background: radial-gradient(
-    ellipse 60% 50% at 50% 50%,
-    rgba(255, 254, 250, 0.34),
-    transparent 75%
-  );
-  filter: blur(18px);
-  pointer-events: none;
-  animation: mist-drift 18s ease-in-out infinite alternate;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
-/* Kota Hujan subtle diagonal rain-shimmer overlay */
-.hero-rain-layer {
-  position: absolute;
-  inset: -20% 0 0 0;
-  background-image: repeating-linear-gradient(
-    108deg,
-    transparent 0px,
-    transparent 38px,
-    rgba(255, 255, 255, 0.16) 38px,
-    rgba(255, 255, 255, 0.02) 39.5px
-  );
-  background-size: 220px 220px;
-  opacity: 0.45;
-  pointer-events: none;
-  animation: rain-fall 9s linear infinite;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    opacity: 0.15;
-  }
 }
 
 .landing-wash .hero-copy {
@@ -375,6 +339,7 @@ html, body {
   font-size: 10px;
   margin-bottom: 2px;
 }
+.preview-summary h2,
 .preview-summary h3 {
   font-family: var(--serif);
   font-size: 22px;
@@ -507,15 +472,11 @@ html, body {
   stroke: rgba(255, 254, 250, 0.78);
   stroke-width: 1.25;
   stroke-dasharray: 5 4;
-  animation: road-flow 16s linear infinite;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
 }
 .beacon-pulse {
   fill: rgba(14, 91, 83, 0.26);
   transform-origin: center;
-  animation: beacon-ripple 2.2s ease-out infinite;
+  animation: beacon-ripple 1.8s ease-out 2 forwards;
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
@@ -1278,5 +1239,251 @@ html[data-splash="done"] .rb-site-stage {
   }
   .rb-splash-line {
     animation: none !important;
+  }
+}
+
+/* =========================================================
+   ANTI-SLOP QUALITY LOCKS: NAVIGATION, STATES, CONTRAST & TYPE
+   ========================================================= */
+
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 100000;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(14, 91, 83, 0.28);
+}
+.skip-link:focus {
+  top: 12px;
+}
+
+.rb-splash-skip-btn {
+  margin-top: 18px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgba(143, 167, 161, 0.45);
+  border-radius: 8px;
+  background: rgba(15, 36, 32, 0.75);
+  color: #dcece5;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.rb-splash-skip-btn:hover {
+  border-color: #dcece5;
+  background: #173b38;
+  color: #ffffff;
+}
+
+/* Mobile Navigation Toggle & Drawer */
+.mobile-menu-toggle {
+  display: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffefa;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.mobile-menu-toggle:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.mobile-nav-drawer {
+  display: none;
+  border-bottom: 1px solid var(--line);
+  background: #fffefa;
+  padding: 12px 20px 18px;
+  box-shadow: 0 16px 36px rgba(23, 59, 56, 0.12);
+}
+.mobile-nav-drawer[hidden] {
+  display: none !important;
+}
+.mobile-nav-drawer a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.mobile-nav-drawer a:hover,
+.mobile-nav-drawer a.active {
+  background: #e7f0eb;
+  color: var(--green);
+}
+.mobile-nav-admin-link {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px !important;
+  color: var(--green) !important;
+}
+
+@media (max-width: 1000px) {
+  .mobile-menu-toggle {
+    display: inline-flex;
+  }
+  .mobile-nav-drawer:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+/* Route loading, error, and empty states */
+.route-state-box {
+  max-width: 580px;
+  margin: 60px auto;
+  padding: 36px 32px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fffefa;
+  text-align: center;
+}
+.route-state-box h1 {
+  font-family: var(--serif);
+  font-size: 34px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+.route-state-box p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+  margin-bottom: 24px;
+}
+.route-state-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.map-status-box,
+.map-empty-filter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 450;
+  max-width: 380px;
+  width: calc(100% - 32px);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 254, 250, 0.96);
+  box-shadow: 0 14px 34px rgba(23, 59, 56, 0.14);
+  text-align: center;
+}
+.map-status-box p,
+.map-empty-filter p {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+
+.search-empty {
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fffefa;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.table-empty-state {
+  padding: 40px 24px;
+  text-align: center;
+  border-top: 1px solid var(--line);
+}
+.table-empty-state p {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.sim-focus-btn {
+  border: 0;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.sim-focus-btn:hover {
+  background: #e3efe9;
+}
+
+.dimension-card-lead {
+  grid-column: span 2;
+  background: #f3f7f4 !important;
+}
+@media (max-width: 700px) {
+  .dimension-card-lead {
+    grid-column: span 1;
+  }
+}
+
+/* Minimum readable typography & 44px touch targets */
+.map-zoom button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.panel-close {
+  min-width: 40px;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+}
+.pagination button {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.select-wrap select,
+.filter-panel select,
+.table-controls select,
+.data-toolbar select {
+  min-height: 42px;
+  font-size: 12px;
+}
+.toggle-row,
+.filter-panel label,
+.place-facts span,
+.place-facts b,
+.score-lockup b,
+.score-lockup small,
+.mini-dimensions > div,
+.legend-title,
+.legend-classes,
+.legend-note,
+.map-hint {
+  font-size: 12px;
+}
+.place-panel {
+  width: 360px;
+}
+@media (max-width: 1000px) {
+  .place-panel {
+    width: 100%;
   }
 }

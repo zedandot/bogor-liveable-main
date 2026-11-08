@@ -3,14 +3,11 @@
 import { useState } from "react";
 import { bogorSvgPaths } from "../lib/bogor-svg-paths";
 import { kelurahanData } from "../kelurahan-data";
-import { classes, scoreToColor } from "../lib/livability";
+import { classes, scoreToColor, toSlug } from "../lib/livability";
 import { Icon } from "./ui";
 
 const kelurahanBySlug = new Map(
-  kelurahanData.map((k) => [
-    k.kelurahan.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-    k,
-  ])
+  kelurahanData.map((k) => [toSlug(k.kelurahan), k])
 );
 
 export type MapDimensionKey =
@@ -50,6 +47,8 @@ function getDimensionScore(
   }
 }
 
+const ZOOM_LEVELS = [1, 1.3, 1.65];
+
 export function BogorMap({
   compact = false,
   selected = true,
@@ -66,6 +65,8 @@ export function BogorMap({
   customScores?: Record<string, number>;
 }) {
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
+  const [zoomIdx, setZoomIdx] = useState(0);
+
   const activeSlug = hoveredSlug ?? (selected ? selectedSlug : null);
   const activeItem = activeSlug
     ? bogorSvgPaths.find((p) => p.slug === activeSlug)
@@ -74,86 +75,108 @@ export function BogorMap({
     ? getDimensionScore(activeSlug, dimension, customScores)
     : null;
 
+  const scale = ZOOM_LEVELS[zoomIdx] ?? 1;
+
   return (
     <div className={`map-canvas ${compact ? "map-compact" : ""}`}>
-      <div className="map-paper" />
+      <div className="map-paper" aria-hidden="true" />
       <svg
         className="bogor-shape"
         viewBox="0 0 260 260"
-        role="img"
-        aria-label="Peta choropleth interaktif 68 kelurahan Kota Bogor"
+        role="group"
+        aria-label="Peta choropleth 68 kelurahan Kota Bogor"
       >
         <defs>
-          <filter id="bogor-drop-shadow" x="-12%" y="-12%" width="124%" height="124%">
-            <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#0e3b34" floodOpacity=".18" />
+          <filter
+            id="bogor-drop-shadow"
+            x="-12%"
+            y="-12%"
+            width="124%"
+            height="124%"
+          >
+            <feDropShadow
+              dx="0"
+              dy="4"
+              stdDeviation="4"
+              floodColor="#0e3b34"
+              floodOpacity=".14"
+            />
           </filter>
-          <radialGradient id="beacon-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#fffefa" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#0e5b53" stopOpacity="0" />
-          </radialGradient>
         </defs>
 
-        {/* Subtle topographic compass rings */}
-        <g className="map-topo-rings" aria-hidden="true">
-          <circle cx="136" cy="128" r="56" />
-          <circle cx="136" cy="128" r="92" />
-          <circle cx="136" cy="128" r="122" />
-          <line x1="136" y1="6" x2="136" y2="254" />
-          <line x1="12" y1="128" x2="248" y2="128" />
-        </g>
-
-        {/* Real 68 kelurahan polygons */}
-        <g filter="url(#bogor-drop-shadow)">
-          {bogorSvgPaths.map((item, idx) => {
-            const score = getDimensionScore(item.slug, dimension, customScores);
-            const fill = scoreToColor(score);
-            const isSelected = selected && item.slug === selectedSlug;
-            const isHovered = item.slug === hoveredSlug;
-            return (
-              <path
-                key={item.kode}
-                d={item.d}
-                fill={fill}
-                stroke={isSelected || isHovered ? "#0b3f39" : "#f6f5ed"}
-                strokeWidth={isSelected || isHovered ? 2.1 : 0.85}
-                style={{
-                  animationDelay: `${Math.min(idx * 12, 480)}ms`,
-                }}
-                className={`bogor-kel-path ${
-                  isSelected ? "map-selected" : ""
-                } ${isHovered ? "map-hovered" : ""}`}
-                onMouseEnter={() => setHoveredSlug(item.slug)}
-                onMouseLeave={() => setHoveredSlug(null)}
-                onClick={() => onSelect?.(item.slug)}
-              />
-            );
-          })}
-        </g>
-
-        {/* Animated Ciliwung-Cisadane arterial corridors */}
-        <g className="map-roads" pointerEvents="none">
-          <path d="M58 76 Q112 104 148 124 T204 221" />
-          <path d="M112 31 Q136 86 134 132 T130 188" />
-          <path d="M88 100 Q133 118 178 153" />
-        </g>
-
-        {/* Active kelurahan beacon */}
-        {activeItem && (
-          <g
-            className="map-active-beacon"
-            transform={`translate(${activeItem.cx}, ${activeItem.cy})`}
-            pointerEvents="none"
-          >
-            <circle r="11" className="beacon-pulse" />
-            <circle r="4" fill="#fffefa" stroke="#0e5b53" strokeWidth="2" />
+        <g
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "130px 130px",
+            transition: "transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+        >
+          {/* Real 68 kelurahan polygons */}
+          <g filter="url(#bogor-drop-shadow)">
+            {bogorSvgPaths.map((item) => {
+              const score = getDimensionScore(
+                item.slug,
+                dimension,
+                customScores
+              );
+              const fill = scoreToColor(score);
+              const isSelected = selected && item.slug === selectedSlug;
+              const isHovered = item.slug === hoveredSlug;
+              return (
+                <path
+                  key={item.kode}
+                  d={item.d}
+                  fill={fill}
+                  stroke={isSelected || isHovered ? "#0b3f39" : "#f6f5ed"}
+                  strokeWidth={isSelected || isHovered ? 2.1 : 0.85}
+                  className={`bogor-kel-path ${
+                    isSelected ? "map-selected" : ""
+                  } ${isHovered ? "map-hovered" : ""}`}
+                  tabIndex={onSelect ? 0 : undefined}
+                  role={onSelect ? "button" : undefined}
+                  aria-label={`${item.name}, ${item.district}, skor ${score
+                    .toFixed(2)
+                    .replace(".", ",")}`}
+                  onMouseEnter={() => setHoveredSlug(item.slug)}
+                  onMouseLeave={() => setHoveredSlug(null)}
+                  onFocus={() => setHoveredSlug(item.slug)}
+                  onBlur={() => setHoveredSlug(null)}
+                  onClick={() => onSelect?.(item.slug)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect?.(item.slug);
+                    }
+                  }}
+                />
+              );
+            })}
           </g>
-        )}
+
+          {/* Active kelurahan marker */}
+          {activeItem && (
+            <g
+              className="map-active-beacon"
+              transform={`translate(${activeItem.cx}, ${activeItem.cy})`}
+              pointerEvents="none"
+            >
+              <circle r="8" className="beacon-pulse" />
+              <circle r="3.5" fill="#fffefa" stroke="#0e5b53" strokeWidth="2" />
+            </g>
+          )}
+        </g>
       </svg>
 
-      {/* District callout pills */}
-      <div className="map-label label-one">Bogor Utara</div>
-      <div className="map-label label-two">Bogor Tengah</div>
-      <div className="map-label label-three">Bogor Selatan</div>
+      {/* District callout labels */}
+      <div className="map-label label-one" aria-hidden="true">
+        Bogor Utara
+      </div>
+      <div className="map-label label-two" aria-hidden="true">
+        Bogor Tengah
+      </div>
+      <div className="map-label label-three" aria-hidden="true">
+        Bogor Selatan
+      </div>
 
       {/* Live interactive floating badge when hovering/selecting */}
       {activeItem && activeScore !== null && (
@@ -172,9 +195,25 @@ export function BogorMap({
 
       {!compact && (
         <>
-          <div className="map-zoom">
-            <button aria-label="Perbesar">+</button>
-            <button aria-label="Perkecil">−</button>
+          <div className="map-zoom" role="group" aria-label="Kontrol perbesaran peta">
+            <button
+              type="button"
+              aria-label="Perbesar tampilan peta"
+              disabled={zoomIdx >= ZOOM_LEVELS.length - 1}
+              onClick={() =>
+                setZoomIdx((z) => Math.min(ZOOM_LEVELS.length - 1, z + 1))
+              }
+            >
+              +
+            </button>
+            <button
+              type="button"
+              aria-label="Perkecil tampilan peta"
+              disabled={zoomIdx <= 0}
+              onClick={() => setZoomIdx((z) => Math.max(0, z - 1))}
+            >
+              −
+            </button>
           </div>
           <div className="map-attribution">68 Kelurahan · Geometri RBI BIG</div>
         </>
@@ -183,7 +222,11 @@ export function BogorMap({
   );
 }
 
-export function ScoreLegend({ title = "Indeks kelayakhunian" }: { title?: string }) {
+export function ScoreLegend({
+  title = "Indeks kelayakhunian",
+}: {
+  title?: string;
+}) {
   return (
     <div className="legend">
       <div className="legend-title">
@@ -206,13 +249,13 @@ export function ScoreLegend({ title = "Indeks kelayakhunian" }: { title?: string
               <i style={{ background: c.color }} />
               {c.label}
             </span>
-            <small>{c.range}</small>
+            <b>{c.range}</b>
           </div>
         ))}
       </div>
       <div className="legend-note">
         <i />
-        68 kelurahan · WGS 84 (EPSG:4326)
+        68 kelurahan · interval setara (0,00 sampai 1,00)
       </div>
     </div>
   );

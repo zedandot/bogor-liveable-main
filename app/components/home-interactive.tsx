@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { citySummary } from "../data";
 import { kelurahanData } from "../kelurahan-data";
 import { scoreToClass, scoreToColor, toSlug } from "../lib/livability";
 import { BogorMap, type MapDimensionKey } from "./map-visual";
@@ -51,13 +52,13 @@ export function HeroInteractivePreview() {
     <div className="hero-app-preview">
       <div className="preview-bar">
         <span>
-          <i />
-          <i />
-          <i />
+          <i aria-hidden="true" />
+          <i aria-hidden="true" />
+          <i aria-hidden="true" />
           ruang<b>bogor</b>
           <em className="preview-live-badge">
-            <span className="live-dot" />
-            68 Kelurahan Interaktif
+            <span className="live-dot" aria-hidden="true" />
+            Pratinjau 68 Kelurahan
           </em>
         </span>
         <nav aria-label="Pilih dimensi pratinjau" className="preview-dim-pills">
@@ -72,7 +73,7 @@ export function HeroInteractivePreview() {
             </button>
           ))}
         </nav>
-        <div className="preview-quick-chips">
+        <div className="preview-quick-chips" role="group" aria-label="Contoh kelurahan">
           {quickPicks.map((slug) => {
             const item = kelurahanData.find((k) => toSlug(k.kelurahan) === slug);
             if (!item) return null;
@@ -99,7 +100,7 @@ export function HeroInteractivePreview() {
             dimension={dimension}
           />
           <span className="preview-map-hint">
-            Klik poligon kelurahan pada peta untuk inspeksi langsung
+            Klik poligon kelurahan pada peta untuk memilih wilayah
           </span>
         </div>
 
@@ -109,15 +110,15 @@ export function HeroInteractivePreview() {
               <p className="eyebrow">
                 Peringkat #{activeKel.peringkat} dari 68
               </p>
-              <h3>{activeKel.kelurahan}</h3>
+              <h2>{activeKel.kelurahan}</h2>
               <span>Kecamatan {activeKel.kecamatan}</span>
             </div>
             <span
               className="preview-class-chip"
               style={{
                 background: `${scoreToColor(displayedScore)}22`,
-                color: scoreToColor(displayedScore),
-                borderColor: `${scoreToColor(displayedScore)}55`,
+                color: "#173b38",
+                borderColor: `${scoreToColor(displayedScore)}66`,
               }}
             >
               {scoreToClass(displayedScore)}
@@ -127,9 +128,7 @@ export function HeroInteractivePreview() {
           <div className="preview-score-row">
             <strong>{displayedScore.toFixed(2).replace(".", ",")}</strong>
             <small>
-              {
-                previewDimensions.find((d) => d.key === dimension)?.label
-              }
+              {previewDimensions.find((d) => d.key === dimension)?.label}
               <br />
               {activeKel.penduduk.toLocaleString("id-ID")} jiwa ·{" "}
               {activeKel.luas_km2.toFixed(2).replace(".", ",")} km²
@@ -138,10 +137,10 @@ export function HeroInteractivePreview() {
 
           <ul className="preview-dim-bars">
             {[
-              { label: "Kesehatan", val: activeKel.skor_kesehatan, color: "#2e7468" },
-              { label: "Pendidikan", val: activeKel.skor_pendidikan, color: "#4e8b74" },
-              { label: "Transportasi", val: activeKel.skor_transportasi, color: "#689970" },
-              { label: "Sosial", val: activeKel.skor_sosial, color: "#7ea36b" },
+              { label: "Kesehatan", val: activeKel.skor_kesehatan, color: "#0e5b53" },
+              { label: "Pendidikan", val: activeKel.skor_pendidikan, color: "#2e7468" },
+              { label: "Transportasi", val: activeKel.skor_transportasi, color: "#6ca77e" },
+              { label: "Sosial", val: activeKel.skor_sosial, color: "#b86b3d" },
             ].map((bar) => (
               <li key={bar.label}>
                 <span>{bar.label}</span>
@@ -160,10 +159,10 @@ export function HeroInteractivePreview() {
 
           <div className="preview-summary-links">
             <Link href={`/wilayah/${toSlug(activeKel.kelurahan)}`}>
-              Profil kelurahan <Icon name="arrow" size={13} />
+              Profil {activeKel.kelurahan} <Icon name="arrow" size={13} />
             </Link>
             <Link href="/peta">
-              Buka WebGIS penuh <Icon name="map" size={13} />
+              Buka peta penuh <Icon name="map" size={13} />
             </Link>
           </div>
         </div>
@@ -186,38 +185,59 @@ export function AnimatedStatStrip() {
           obs.disconnect();
         }
       },
-      { threshold: 0.25 }
+      { threshold: 0.2 }
     );
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
   const stats = [
-    { value: "68", unit: "", label: "Kelurahan dianalisis penuh" },
-    { value: "6", unit: "", label: "Kecamatan terintegrasi" },
-    { value: "676", unit: "titik", label: "Faskes & sekolah terpetakan" },
-    { value: "111,37", unit: "km²", label: "Luas wilayah Kota Bogor" },
-    { value: "84,9%", unit: "", label: "Jangkauan faskes primer" },
+    {
+      value: String(citySummary.totalKelurahan),
+      unit: "",
+      label: "Kelurahan terpetakan (RBI BIG)",
+    },
+    {
+      value: String(citySummary.totalKecamatan),
+      unit: "",
+      label: "Kecamatan di Kota Bogor",
+    },
+    {
+      value: String(citySummary.totalSchools),
+      unit: "unit",
+      label: "Sekolah SD, SMP & SMA/SMK",
+    },
+    {
+      value: citySummary.totalAreaKm2,
+      unit: "km²",
+      label: "Total luas wilayah terukur",
+    },
+    {
+      value: `${citySummary.avgFaskesPct}%`,
+      unit: "",
+      label: "Rata-rata cakupan layanan faskes",
+    },
   ];
 
   return (
     <section
       ref={ref}
+      aria-label="Ringkasan data Kota Bogor"
       className={`city-strip ${visible ? "is-visible" : ""}`}
     >
       <p>
-        <span className="strip-icon-badge">
-          <Icon name="rain" size={20} />
+        <span className="strip-icon-badge" aria-hidden="true">
+          <Icon name="map" size={20} />
         </span>
         <span>
-          <strong>Atlas Spasial Kota Bogor</strong>
-          <small>Data Geospasial Terverifikasi · EPSG:4326</small>
+          <strong>Geodatabase Kota Bogor</strong>
+          <small>Sumber: BIG, OSM, SIMDATA &amp; Kemendikbud</small>
         </span>
       </p>
       {stats.map((s, idx) => (
         <div
           key={s.label}
-          style={{ transitionDelay: `${idx * 75}ms` }}
+          style={{ transitionDelay: `${idx * 65}ms` }}
           className="strip-stat-item"
         >
           <b>
@@ -242,7 +262,9 @@ export function InteractiveDistrictRibbon({
     className: string;
   }[];
 }) {
-  const [activeDistrict, setActiveDistrict] = useState(districts[0]?.name ?? "Bogor Tengah");
+  const [activeDistrict, setActiveDistrict] = useState(
+    districts[0]?.name ?? "Bogor Tengah"
+  );
 
   const activeInfo = useMemo(() => {
     const d = districts.find((x) => x.name === activeDistrict) ?? districts[0];
@@ -272,12 +294,12 @@ export function InteractiveDistrictRibbon({
     <section className="district-ribbon reveal-on-scroll">
       <div className="district-ribbon-copy">
         <div className="section-heading">
-          <p className="eyebrow">Agregat kecamatan</p>
-          <h2>Enam wajah Kota Bogor.</h2>
+          <p className="eyebrow">Agregat 6 kecamatan</p>
+          <h2>Perbandingan skor antarkecamatan.</h2>
         </div>
         <p className="district-lead">
-          Pilih batang kecamatan untuk melihat karakter kelayakhunian, jumlah
-          kelurahan, dan kelurahan unggulan di dalamnya.
+          Pilih batang kecamatan untuk melihat rata-rata indeks tertimbang
+          penduduk, jumlah kelurahan, dan kelurahan tertinggi di dalamnya.
         </p>
 
         <div className="district-spotlight-card" key={activeInfo.name}>
@@ -322,17 +344,21 @@ export function InteractiveDistrictRibbon({
         </div>
       </div>
 
-      <div className="district-bars" role="group" aria-label="Grafik skor 6 kecamatan">
+      <div
+        className="district-bars"
+        role="group"
+        aria-label="Grafik perbandingan 6 kecamatan"
+      >
         {districts.map((d, i) => {
           const isActive = d.name === activeDistrict;
           return (
             <button
               type="button"
               key={d.name}
+              aria-pressed={isActive}
               className={`district-bar-col ${isActive ? "is-active" : ""}`}
               onClick={() => setActiveDistrict(d.name)}
-              onMouseEnter={() => setActiveDistrict(d.name)}
-              style={{ animationDelay: `${i * 90}ms` }}
+              style={{ animationDelay: `${i * 75}ms` }}
             >
               <span className="district-bar-name">{d.name}</span>
               <div className="district-bar-track">
@@ -357,7 +383,6 @@ export function ScrollRevealEffects() {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    // Fallback for browsers that do not support CSS scroll-driven view() + animation-range: entry
     const supportsNativeViewTimeline =
       typeof CSS !== "undefined" &&
       CSS.supports("(animation-timeline: view()) and (animation-range: entry)");

@@ -155,7 +155,7 @@ async function RegionContent({
         </div>
 
         <div className="detail-map">
-          <BogorMap compact />
+          <BogorMap compact selectedSlug={slugify(name)} />
         </div>
       </section>
 
@@ -254,7 +254,10 @@ async function RegionContent({
           <h2>Bagaimana {name} dibanding wilayah lain?</h2>
         </div>
 
-        <Link className="button button-cream" href="/perbandingan">
+        <Link
+          className="button button-cream"
+          href={`/perbandingan?a=${encodeURIComponent(name)}`}
+        >
           Pilih wilayah pembanding
           <Icon name="arrow" />
         </Link>

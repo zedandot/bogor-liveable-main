@@ -1,6 +1,6 @@
 "use client";
 
-// WBS 1.5.1 + 1.5.2 + 1.5.3 — Map engine Leaflet, basemap switcher (4 mode),
+// WBS 1.5.1 + 1.5.2 + 1.5.3: Map engine Leaflet, basemap switcher (4 mode),
 // label nama daerah (68 kelurahan & 6 kecamatan), dan choropleth 5 kelas.
 
 import "leaflet/dist/leaflet.css";
@@ -36,7 +36,7 @@ const BASEMAPS: Record<
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     labelUrl: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
-    attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics",
+    attribution: "Tiles &copy; Esri, Source: Esri, Maxar, Earthstar Geographics",
     maxZoom: 19,
   },
   osm: {

@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { Header, Icon } from "../components/ui";
 import { districts } from "../data";
 import { kelurahanData } from "../kelurahan-data";
@@ -10,7 +11,7 @@ type Message = { role: "user" | "bot"; text: string };
 
 const examples = [
   "Kelurahan mana yang peringkat #1 dan apa keunggulannya?",
-  "Kelurahan mana yang paling jauh dari Puskesmas (blank spot)?",
+  "Di mana kelurahan yang paling jauh dari Puskesmas (blank spot)?",
   "Bandingkan Pabaton dengan Bantarjati.",
   "Kelurahan mana yang ruang terbuka hijaunya (lingkungan) tertinggi?",
 ];
@@ -18,7 +19,6 @@ const examples = [
 function generateAnswer(query: string): string {
   const q = query.toLowerCase();
 
-  // Check if user mentions 2 kelurahan to compare
   const matchedKel = kelurahanData.filter((k) =>
     q.includes(k.kelurahan.toLowerCase())
   );
@@ -64,19 +64,33 @@ function generateAnswer(query: string): string {
       .toFixed(2)
       .replace(".", ",")}, dan Lingkungan ${k.skor_lingkungan
       .toFixed(2)
-      .replace(".", ",")} (vegetasi ${k.vegetasi_pct.toFixed(1).replace(".", ",")}%). Jarak ke RS terdekat ${
+      .replace(".", ",")} (vegetasi ${k.vegetasi_pct.toFixed(1).replace(".", ",")}%). Jarak ke RS terdekat ${Math.round(
       k.jarak_rs_m
-    } m dan Puskesmas ${k.jarak_puskesmas_m} m.`;
+    ).toLocaleString("id-ID")} m dan Puskesmas ${Math.round(
+      k.jarak_puskesmas_m
+    ).toLocaleString("id-ID")} m.`;
   }
 
-  if (q.includes("jauh") || q.includes("blank") || q.includes("puskesmas") || q.includes("rumah sakit") || q.includes("faskes")) {
+  if (
+    q.includes("jauh") ||
+    q.includes("blank") ||
+    q.includes("puskesmas") ||
+    q.includes("rumah sakit") ||
+    q.includes("faskes")
+  ) {
     const farthestPkm = [...kelurahanData].sort(
       (a, b) => b.jarak_puskesmas_m - a.jarak_puskesmas_m
     )[0];
     const farthestRs = [...kelurahanData].sort(
       (a, b) => b.jarak_rs_m - a.jarak_rs_m
     )[0];
-    return `Berdasarkan analisis buffer WBS 1.3.2, 84,9% luas Kota Bogor terjangkau layanan faskes primer (Puskesmas 2 km / Klinik 1 km), menyisakan 15,1% (16,86 km²) area blank spot di pinggiran kota. Kelurahan dengan jarak terjauh ke Puskesmas adalah ${
+    const avgCov = (
+      kelurahanData.reduce((s, k) => s + k.cakupan_faskes_pct, 0) /
+      kelurahanData.length
+    )
+      .toFixed(1)
+      .replace(".", ",");
+    return `Berdasarkan analisis buffer faskes, rata-rata cakupan layanan faskes kelurahan di Kota Bogor mencapai ${avgCov}%. Kelurahan dengan jarak jaringan jalan terjauh ke Puskesmas adalah ${
       farthestPkm.kelurahan
     } (${farthestPkm.kecamatan}) sejauh ${(farthestPkm.jarak_puskesmas_m / 1000)
       .toFixed(2)
@@ -85,7 +99,12 @@ function generateAnswer(query: string): string {
     } (${(farthestRs.jarak_rs_m / 1000).toFixed(2).replace(".", ",")} km).`;
   }
 
-  if (q.includes("lingkungan") || q.includes("hijau") || q.includes("rth") || q.includes("vegetasi")) {
+  if (
+    q.includes("lingkungan") ||
+    q.includes("hijau") ||
+    q.includes("rth") ||
+    q.includes("vegetasi")
+  ) {
     const topEnv = [...kelurahanData].sort(
       (a, b) => b.skor_lingkungan - a.skor_lingkungan
     );
@@ -119,20 +138,28 @@ function generateAnswer(query: string): string {
   const top1 = kelurahanData[0];
   const top2 = kelurahanData[1];
   const top3 = kelurahanData[2];
-  return `Berdasarkan Geodatabase Bogor Livable City (68 kelurahan), peringkat #1 adalah ${
+  return `Berdasarkan Geodatabase Ruang Bogor (68 kelurahan), peringkat #1 adalah ${
     top1.kelurahan
   } (${top1.kecamatan}) dengan skor ${top1.skor_livable
     .toFixed(2)
-    .replace(".", ",")} (Pendidikan 1,00; Transportasi 1,00; Kesehatan 0,92), disusul #2 ${
-    top2.kelurahan
-  } (${top2.skor_livable.toFixed(2).replace(".", ",")}) dan #3 ${
-    top3.kelurahan
-  } (${top3.skor_livable
+    .replace(".", ",")} (Pendidikan ${top1.skor_pendidikan
+    .toFixed(2)
+    .replace(".", ",")}; Transportasi ${top1.skor_transportasi
+    .toFixed(2)
+    .replace(".", ",")}; Kesehatan ${top1.skor_kesehatan
+    .toFixed(2)
+    .replace(".", ",")}), disusul #2 ${top2.kelurahan} (${top2.skor_livable
+    .toFixed(2)
+    .replace(".", ",")}) dan #3 ${top3.kelurahan} (${top3.skor_livable
     .toFixed(2)
     .replace(".", ",")}). Anda dapat menyebutkan nama kelurahan mana pun di Kota Bogor untuk melihat rincian indikatornya.`;
 }
 
-export default function AssistantPage() {
+function AssistantWorkspace() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q");
+  const consumedRef = useRef<string | null>(null);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
 
@@ -147,117 +174,134 @@ export default function AssistantPage() {
     setInput("");
   };
 
+  useEffect(() => {
+    if (initialQuery && consumedRef.current !== initialQuery) {
+      consumedRef.current = initialQuery;
+      ask(initialQuery);
+    }
+  }, [initialQuery]);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     ask(input);
   };
 
   return (
-    <div className="assistant-page">
-      <Header />
-      <main>
-        <aside className="assistant-aside">
-          <div>
-            <span className="assistant-orb">
-              <Icon name="bot" size={28} />
-            </span>
-            <p className="eyebrow">Asisten Spasial SDSS</p>
-            <h1>Tanya Bogor</h1>
-            <p>
-              Temukan jawaban instan dari basis data geospasial 68 kelurahan dan
-              6 kecamatan Kota Bogor.
-            </p>
-          </div>
-          <div className="assistant-scope">
-            <b>Cakupan analisis langsung</b>
-            <span>
-              <Icon name="check" />
-              Profil &amp; skor 68 kelurahan
-            </span>
-            <span>
-              <Icon name="check" />
-              Komparasi langsung 2 kelurahan
-            </span>
-            <span>
-              <Icon name="check" />
-              Blank spot &amp; jarak faskes
-            </span>
-            <span>
-              <Icon name="check" />
-              Agregasi 6 kecamatan
-            </span>
-          </div>
-          <small>
-            <Icon name="info" size={15} />
-            Menjawab langsung dari atribut `kelurahan.geojson` &amp; analisis
-            buffer QGIS.
-          </small>
-        </aside>
+    <main>
+      <aside className="assistant-aside">
+        <div>
+          <p className="eyebrow">Pencarian data spasial</p>
+          <h1>Tanya Bogor</h1>
+          <p>
+            Cari jawaban langsung dari atribut geospasial 68 kelurahan dan 6
+            kecamatan di Kota Bogor.
+          </p>
+        </div>
+        <div className="assistant-scope">
+          <b>Cakupan analisis langsung</b>
+          <span>
+            <Icon name="check" />
+            Profil &amp; skor 68 kelurahan
+          </span>
+          <span>
+            <Icon name="check" />
+            Perbandingan langsung 2 kelurahan
+          </span>
+          <span>
+            <Icon name="check" />
+            Blank spot &amp; jarak fasilitas kesehatan
+          </span>
+          <span>
+            <Icon name="check" />
+            Agregasi 6 kecamatan
+          </span>
+        </div>
+        <small>
+          <Icon name="info" size={15} />
+          Menjawab langsung dari atribut 68 kelurahan dan hasil analisis buffer
+          spasial.
+        </small>
+      </aside>
 
-        <section className="chat-stage">
-          {messages.length === 0 ? (
-            <div className="chat-empty">
-              <div className="rain-rings">
-                <i />
-                <i />
-                <i />
-                <Icon name="rain" size={34} />
-              </div>
-              <h2>Apa yang ingin Anda selidiki?</h2>
-              <p>
-                Ketik nama kelurahan (misal: <b>Pabaton</b>, <b>Bantarjati</b>,{" "}
-                <b>Pasir Kuda</b>, <b>Balumbang Jaya</b>) atau pilih pertanyaan
-                di bawah.
-              </p>
-              <div className="prompt-examples">
-                {examples.map((x) => (
-                  <button key={x} onClick={() => ask(x)}>
-                    {x}
-                    <Icon name="arrow" size={15} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="message-list">
-              <div className="chat-date">Sesi Analisis Spasial · Data 2026</div>
-              {messages.map((m, i) => (
-                <div className={"message " + m.role} key={i}>
-                  {m.role === "bot" && (
-                    <span>
-                      <Icon name="bot" size={16} />
-                    </span>
-                  )}
-                  <div>
-                    {m.text}
-                    {m.role === "bot" && (
-                      <small>
-                        Sumber: Geodatabase Bogor Livable City · 68 Kelurahan
-                        (WGS 84)
-                      </small>
-                    )}
-                  </div>
-                </div>
+      <section className="chat-stage">
+        {messages.length === 0 ? (
+          <div className="chat-empty">
+            <h2>Apa yang ingin Anda periksa?</h2>
+            <p>
+              Ketik nama kelurahan (misal: <b>Pabaton</b>, <b>Bantarjati</b>,{" "}
+              <b>Pasir Kuda</b>, <b>Balumbang Jaya</b>) atau pilih salah satu
+              pertanyaan di bawah.
+            </p>
+            <div className="prompt-examples">
+              {examples.map((x) => (
+                <button type="button" key={x} onClick={() => ask(x)}>
+                  {x}
+                  <Icon name="arrow" size={15} />
+                </button>
               ))}
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="message-list">
+            <div className="chat-date">
+              Sesi Pencarian Data Spasial · 68 Kelurahan
+            </div>
+            {messages.map((m, i) => (
+              <div className={"message " + m.role} key={i}>
+                {m.role === "bot" && (
+                  <span aria-hidden="true">
+                    <Icon name="map" size={16} />
+                  </span>
+                )}
+                <div>
+                  {m.text}
+                  {m.role === "bot" && (
+                    <small>
+                      Sumber: Geodatabase Ruang Bogor · 68 Kelurahan (WGS 84)
+                    </small>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-          <form className="chat-input" onSubmit={submit}>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Sebutkan nama kelurahan atau bandingkan 2 wilayah..."
-              aria-label="Pertanyaan"
-            />
-            <button aria-label="Kirim pertanyaan">
-              <Icon name="arrow" />
-            </button>
-            <small>
-              Tekan Enter untuk mengirim · Terhubung ke 68 kelurahan Kota Bogor.
-            </small>
-          </form>
-        </section>
-      </main>
+        <form className="chat-input" onSubmit={submit}>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Sebutkan nama kelurahan atau bandingkan 2 wilayah..."
+            aria-label="Ketik pertanyaan seputar kelurahan di Kota Bogor"
+          />
+          <button type="submit" aria-label="Kirim pertanyaan">
+            <Icon name="arrow" />
+          </button>
+          <small>
+            Tekan Enter untuk mengirim · Terhubung ke 68 kelurahan Kota Bogor.
+          </small>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+export default function AssistantPage() {
+  return (
+    <div className="assistant-page">
+      <Header />
+      <Suspense
+        fallback={
+          <main>
+            <section className="chat-stage">
+              <div className="chat-empty">
+                <p>Memuat halaman Tanya Bogor...</p>
+              </div>
+            </section>
+          </main>
+        }
+      >
+        <AssistantWorkspace />
+      </Suspense>
     </div>
   );
 }

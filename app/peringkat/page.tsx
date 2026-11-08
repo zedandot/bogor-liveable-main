@@ -16,21 +16,31 @@ export default function RankingPage() {
 
   const filtered = useMemo(() => {
     return ranking.filter((r) => {
-      if (query && !r.name.toLowerCase().includes(query.toLowerCase())) return false;
-      if (districtFilter !== "Semua kecamatan" && r.district !== districtFilter) return false;
-      if (classFilter !== "Semua klasifikasi" && r.className !== classFilter) return false;
+      if (query && !r.name.toLowerCase().includes(query.toLowerCase()))
+        return false;
+      if (
+        districtFilter !== "Semua kecamatan" &&
+        r.district !== districtFilter
+      )
+        return false;
+      if (classFilter !== "Semua klasifikasi" && r.className !== classFilter)
+        return false;
       return true;
     });
   }, [query, districtFilter, classFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageRows = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const top = ranking[0];
   const median = ranking[Math.floor(ranking.length / 2)];
   const counts = classes.map(
-    (c) => ranking.filter((r) => classify(r.skor_livable).label === c.label).length
+    (c) =>
+      ranking.filter((r) => classify(r.skor_livable).label === c.label).length
   );
 
   const reset = () => {
@@ -44,12 +54,12 @@ export default function RankingPage() {
     <PageShell className="standard-page">
       <PageIntro
         eyebrow="Peringkat wilayah"
-        title="Lihat siapa unggul, pahami alasannya."
-        description="Urutan 68 kelurahan berdasarkan indeks kelayakhunian. Gunakan filter untuk menemukan wilayah yang ingin Anda kaji."
+        title="Urutan 68 kelurahan berdasarkan indeks kelayakhunian."
+        description="Gunakan pencarian atau filter kecamatan dan kelas untuk menyaring wilayah, lalu klik nama kelurahan untuk melihat rincian indikatornya."
         action={
           <a className="button" href="/data/kelurahan.geojson" download>
             <Icon name="download" />
-            Ekspor GeoJSON
+            Unduh GeoJSON
           </a>
         }
       />
@@ -69,7 +79,9 @@ export default function RankingPage() {
         </article>
         <article>
           <span>Rentang skor</span>
-          <b>{fmt(top.skor_livable - ranking[ranking.length - 1].skor_livable)}</b>
+          <b>
+            {fmt(top.skor_livable - ranking[ranking.length - 1].skor_livable)}
+          </b>
           <p>0,00 hingga {fmt(top.skor_livable)}</p>
         </article>
         <div className="class-distribution">
@@ -79,14 +91,18 @@ export default function RankingPage() {
               <i
                 key={classes[i].label}
                 style={{
-                  width: `${Math.max(3, Math.round((n / ranking.length) * 100))}%`,
+                  width: `${Math.max(
+                    3,
+                    Math.round((n / ranking.length) * 100)
+                  )}%`,
                   background: classes[i].color,
                 }}
               />
             ))}
           </div>
           <small>
-            {counts[0]} sangat layak · {counts[1]} layak · {counts[2]} cukup · {counts[3]} tidak layak · {counts[4]} sangat tidak layak
+            {counts[0]} sangat layak · {counts[1]} layak · {counts[2]} cukup ·{" "}
+            {counts[3]} tidak layak · {counts[4]} sangat tidak layak
           </small>
         </div>
       </section>
@@ -97,6 +113,7 @@ export default function RankingPage() {
             <Icon name="search" />
             <input
               value={query}
+              aria-label="Cari nama kelurahan"
               onChange={(e) => {
                 setQuery(e.target.value);
                 setPage(1);
@@ -105,6 +122,7 @@ export default function RankingPage() {
             />
           </label>
           <select
+            aria-label="Filter kecamatan"
             value={districtFilter}
             onChange={(e) => {
               setDistrictFilter(e.target.value);
@@ -119,6 +137,7 @@ export default function RankingPage() {
             ))}
           </select>
           <select
+            aria-label="Filter klasifikasi"
             value={classFilter}
             onChange={(e) => {
               setClassFilter(e.target.value);
@@ -146,42 +165,56 @@ export default function RankingPage() {
             <span>Klasifikasi</span>
             <span>Penduduk</span>
           </div>
-          {pageRows.map((r) => (
-            <Link
-              href={`/wilayah/${slugify(r.name)}`}
-              className="table-row"
-              key={r.kode}
-            >
-              <span className={r.rank <= 3 ? "medal" : ""}>
-                #{String(r.rank).padStart(2, "0")}
-              </span>
-              <strong>{r.name}</strong>
-              <span>{r.district}</span>
-              <b>{fmt(r.skor_livable)}</b>
-              <span>
-                <i
-                  className="status-dot"
-                  style={{ background: classify(r.skor_livable).color }}
-                />
-                {r.className}
-              </span>
-              <span>{r.penduduk.toLocaleString("id-ID")} jiwa</span>
-            </Link>
-          ))}
+          {pageRows.length > 0 ? (
+            pageRows.map((r) => (
+              <Link
+                href={`/wilayah/${slugify(r.name)}`}
+                className="table-row"
+                key={r.kode}
+              >
+                <span className={r.rank <= 3 ? "medal" : ""}>
+                  #{String(r.rank).padStart(2, "0")}
+                </span>
+                <strong>{r.name}</strong>
+                <span>{r.district}</span>
+                <b>{fmt(r.skor_livable)}</b>
+                <span>
+                  <i
+                    className="status-dot"
+                    style={{ background: classify(r.skor_livable).color }}
+                  />
+                  {r.className}
+                </span>
+                <span>{r.penduduk.toLocaleString("id-ID")} jiwa</span>
+              </Link>
+            ))
+          ) : (
+            <div className="table-empty-state" role="status">
+              <p>
+                Tidak ada kelurahan yang cocok dengan filter saat ini.
+              </p>
+              <button
+                type="button"
+                className="quiet-button"
+                onClick={reset}
+              >
+                Tampilkan semua 68 kelurahan
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="pagination">
           <span>
             Menampilkan{" "}
-            {filtered.length === 0
-              ? 0
-              : (currentPage - 1) * PAGE_SIZE + 1}
-            –{Math.min(currentPage * PAGE_SIZE, filtered.length)} dari{" "}
+            {filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}{" "}
+            sampai {Math.min(currentPage * PAGE_SIZE, filtered.length)} dari{" "}
             {filtered.length} kelurahan
           </span>
           <div>
             <button
               type="button"
+              aria-label="Halaman sebelumnya"
               disabled={currentPage <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
@@ -191,6 +224,8 @@ export default function RankingPage() {
               <button
                 key={n}
                 type="button"
+                aria-label={`Halaman ${n}`}
+                aria-current={n === currentPage ? "page" : undefined}
                 className={n === currentPage ? "active" : ""}
                 onClick={() => setPage(n)}
               >
@@ -199,6 +234,7 @@ export default function RankingPage() {
             ))}
             <button
               type="button"
+              aria-label="Halaman berikutnya"
               disabled={currentPage >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             >

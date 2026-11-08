@@ -1,9 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Icon, PageIntro, PageShell } from "../components/ui";
 import { kelurahanData } from "../data";
-import { classify, dimensionKeys, fmt, type KelurahanProps } from "../lib/livability";
+import {
+  classify,
+  dimensionKeys,
+  fmt,
+  type KelurahanProps,
+} from "../lib/livability";
 
 const RAW_METRICS: {
   label: string;
@@ -12,27 +18,108 @@ const RAW_METRICS: {
   digits: number;
   get: (k: KelurahanProps) => number;
 }[] = [
-  { label: "Cakupan layanan faskes", unit: "% permukiman", digits: 1, get: (k) => k.cakupan_faskes_pct },
-  { label: "Jarak ke rumah sakit", unit: "meter (jalan)", lowerGood: true, digits: 0, get: (k) => k.jarak_rs_m },
-  { label: "Jarak ke puskesmas", unit: "meter (jalan)", lowerGood: true, digits: 0, get: (k) => k.jarak_puskesmas_m },
-  { label: "Rasio sekolah", unit: "per 10.000 jiwa", digits: 2, get: (k) => k.sekolah_per_10rb },
-  { label: "Kepadatan penduduk", unit: "jiwa/km²", lowerGood: true, digits: 0, get: (k) => k.kepadatan_jiwa_km2 },
-  { label: "Tutupan vegetasi", unit: "% wilayah", digits: 1, get: (k) => k.vegetasi_pct },
-  { label: "Vegetasi per kapita", unit: "m²/jiwa", digits: 1, get: (k) => k.vegetasi_m2_per_jiwa },
-  { label: "Kerapatan jalan", unit: "km/km²", digits: 1, get: (k) => k.kerapatan_jalan_km_km2 },
-  { label: "Kawasan perdagangan", unit: "% wilayah", digits: 1, get: (k) => k.perdagangan_pct },
+  {
+    label: "Cakupan layanan faskes",
+    unit: "% permukiman",
+    digits: 1,
+    get: (k) => k.cakupan_faskes_pct,
+  },
+  {
+    label: "Jarak ke rumah sakit",
+    unit: "meter (jalan)",
+    lowerGood: true,
+    digits: 0,
+    get: (k) => k.jarak_rs_m,
+  },
+  {
+    label: "Jarak ke puskesmas",
+    unit: "meter (jalan)",
+    lowerGood: true,
+    digits: 0,
+    get: (k) => k.jarak_puskesmas_m,
+  },
+  {
+    label: "Rasio sekolah",
+    unit: "per 10.000 jiwa",
+    digits: 2,
+    get: (k) => k.sekolah_per_10rb,
+  },
+  {
+    label: "Kepadatan penduduk",
+    unit: "jiwa/km²",
+    lowerGood: true,
+    digits: 0,
+    get: (k) => k.kepadatan_jiwa_km2,
+  },
+  {
+    label: "Tutupan vegetasi",
+    unit: "% wilayah",
+    digits: 1,
+    get: (k) => k.vegetasi_pct,
+  },
+  {
+    label: "Vegetasi per kapita",
+    unit: "m²/jiwa",
+    digits: 1,
+    get: (k) => k.vegetasi_m2_per_jiwa,
+  },
+  {
+    label: "Kerapatan jalan",
+    unit: "km/km²",
+    digits: 1,
+    get: (k) => k.kerapatan_jalan_km_km2,
+  },
+  {
+    label: "Kawasan perdagangan",
+    unit: "% wilayah",
+    digits: 1,
+    get: (k) => k.perdagangan_pct,
+  },
 ];
 
-export default function ComparePage() {
-  const [leftName, setLeftName] = useState(kelurahanData[0]?.kelurahan ?? "Pabaton");
-  const [rightName, setRightName] = useState(kelurahanData[11]?.kelurahan ?? "Bantarjati");
+function CompareContent() {
+  const searchParams = useSearchParams();
+  const paramA = searchParams.get("a");
+  const paramB = searchParams.get("b");
+
+  const [leftName, setLeftName] = useState(
+    kelurahanData[0]?.kelurahan ?? "Pabaton"
+  );
+  const [rightName, setRightName] = useState(
+    kelurahanData[11]?.kelurahan ?? "Bantarjati"
+  );
+
+  useEffect(() => {
+    if (paramA) {
+      const foundA = kelurahanData.find(
+        (k) => k.kelurahan.toLowerCase() === paramA.toLowerCase()
+      );
+      if (foundA) {
+        setLeftName(foundA.kelurahan);
+        if (!paramB && foundA.kelurahan === rightName) {
+          const fallback =
+            kelurahanData.find((k) => k.kelurahan !== foundA.kelurahan) ??
+            kelurahanData[0];
+          setRightName(fallback.kelurahan);
+        }
+      }
+    }
+    if (paramB) {
+      const foundB = kelurahanData.find(
+        (k) => k.kelurahan.toLowerCase() === paramB.toLowerCase()
+      );
+      if (foundB) setRightName(foundB.kelurahan);
+    }
+  }, [paramA, paramB]);
 
   const left = useMemo(
-    () => kelurahanData.find((k) => k.kelurahan === leftName) ?? kelurahanData[0],
+    () =>
+      kelurahanData.find((k) => k.kelurahan === leftName) ?? kelurahanData[0],
     [leftName]
   );
   const right = useMemo(
-    () => kelurahanData.find((k) => k.kelurahan === rightName) ?? kelurahanData[1],
+    () =>
+      kelurahanData.find((k) => k.kelurahan === rightName) ?? kelurahanData[1],
     [rightName]
   );
 
@@ -44,19 +131,16 @@ export default function ComparePage() {
   const diff = left.skor_livable - right.skor_livable;
 
   return (
-    <PageShell className="standard-page">
-      <PageIntro
-        eyebrow="Perbandingan wilayah"
-        title="Dua wilayah, dibaca berdampingan."
-        description="Bandingkan indeks, enam dimensi, dan indikator mentah dari 68 kelurahan untuk memahami kekuatan tiap wilayah."
-      />
-
+    <>
       <section className="compare-picker">
         <label>
           <span>Wilayah pertama</span>
           <div>
             <Icon name="search" />
-            <select value={leftName} onChange={(e) => setLeftName(e.target.value)}>
+            <select
+              value={leftName}
+              onChange={(e) => setLeftName(e.target.value)}
+            >
               {kelurahanData.map((k) => (
                 <option key={k.kode} value={k.kelurahan}>
                   #{k.peringkat} {k.kelurahan} ({k.kecamatan})
@@ -72,7 +156,10 @@ export default function ComparePage() {
           <span>Wilayah kedua</span>
           <div>
             <Icon name="search" />
-            <select value={rightName} onChange={(e) => setRightName(e.target.value)}>
+            <select
+              value={rightName}
+              onChange={(e) => setRightName(e.target.value)}
+            >
               {kelurahanData.map((k) => (
                 <option key={k.kode} value={k.kelurahan}>
                   #{k.peringkat} {k.kelurahan} ({k.kecamatan})
@@ -148,7 +235,7 @@ export default function ComparePage() {
                   <span
                     style={{
                       width: `${Math.max(2, rv * 100)}%`,
-                      background: "#c9895b",
+                      background: "#b86b3d",
                     }}
                   />
                 </i>
@@ -186,6 +273,21 @@ export default function ComparePage() {
           );
         })}
       </section>
+    </>
+  );
+}
+
+export default function ComparePage() {
+  return (
+    <PageShell className="standard-page">
+      <PageIntro
+        eyebrow="Perbandingan wilayah"
+        title="Dua kelurahan, dibaca berdampingan."
+        description="Bandingkan indeks, enam dimensi, dan indikator mentah dari 68 kelurahan untuk memeriksa keunggulan tiap wilayah."
+      />
+      <Suspense fallback={<p>Memuat perbandingan wilayah...</p>}>
+        <CompareContent />
+      </Suspense>
     </PageShell>
   );
 }

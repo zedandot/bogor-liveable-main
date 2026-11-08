@@ -80,6 +80,7 @@ export default function SensitivityPage() {
         description="Geser bobot enam dimensi untuk menyimulasikan perubahan peta choropleth dan peringkat 68 kelurahan secara langsung."
         action={
           <button
+            type="button"
             className="quiet-button"
             onClick={() => setWeights(defaultWeights)}
           >
@@ -204,16 +205,19 @@ export default function SensitivityPage() {
           </div>
         </header>
         {simulation.ranked.slice(0, 10).map((r) => (
-          <div
-            key={r.kode}
-            onClick={() => setSelectedSlug(r.slug)}
-            style={{ cursor: "pointer" }}
-          >
+          <div key={r.kode} className="sim-rank-row">
             <b>#{r.simRank}</b>
             <strong>
               <Link href={`/wilayah/${r.slug}`}>{r.kelurahan}</Link>
               <small>
-                {r.kecamatan} · Resmi #{r.peringkat} ({scoreToClass(r.simScore)})
+                {r.kecamatan} · Resmi #{r.peringkat} ({scoreToClass(r.simScore)}) ·{" "}
+                <button
+                  type="button"
+                  className="sim-focus-btn"
+                  onClick={() => setSelectedSlug(r.slug)}
+                >
+                  Sorot di peta
+                </button>
               </small>
             </strong>
             <span>{r.skor_livable.toFixed(2).replace(".", ",")}</span>
@@ -224,12 +228,12 @@ export default function SensitivityPage() {
                     ? "#0e5b53"
                     : r.rankDelta < 0
                     ? "#b85c3c"
-                    : "#657a74",
+                    : "#48605a",
                 fontWeight: 700,
               }}
             >
               {r.rankDelta === 0
-                ? "→ Tetap"
+                ? "Tetap"
                 : r.rankDelta > 0
                 ? `↑ +${r.rankDelta}`
                 : `↓ ${r.rankDelta}`}

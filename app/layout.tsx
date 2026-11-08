@@ -6,18 +6,14 @@ import "./admin.css";
 import "./revision.css";
 
 export const metadata: Metadata = {
-  title: "Ruang Bogor — Peta Kelayakhunian Kota",
-  description: "Jelajahi dan analisis tingkat kelayakhunian 68 kelurahan di Kota Bogor.",
+  title: "Ruang Bogor: Peta Kelayakhunian 68 Kelurahan Kota Bogor",
+  description:
+    "Peta dan analisis tingkat kelayakhunian 68 kelurahan dan 6 kecamatan di Kota Bogor berdasarkan 10 indikator spasial dan atribut.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="id"
-      className="h-full antialiased"
-      data-splash="active"
-      suppressHydrationWarning
-    >
+    <html lang="id" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <SplashLoader />
         <div className="rb-site-stage">{children}</div>

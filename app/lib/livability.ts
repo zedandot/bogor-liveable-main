@@ -64,13 +64,13 @@ export const dimensionKeys: { key: ThemeKey; label: string; color: string }[] = 
   label: t.label.replace("Dimensi ", ""),
 }));
 
-// Interval setara pada rentang 0–1 (sama dengan halaman Metodologi).
+// Interval setara pada rentang 0 sampai 1 (sama dengan halaman Metodologi).
 export const classes = [
-  { min: 0.8, label: "Sangat layak huni", range: "0,81–1,00", color: "#2e7468" },
-  { min: 0.6, label: "Layak huni", range: "0,61–0,80", color: "#6ca77e" },
-  { min: 0.4, label: "Cukup layak huni", range: "0,41–0,60", color: "#b8cf8b" },
-  { min: 0.2, label: "Tidak layak huni", range: "0,21–0,40", color: "#d8b56a" },
-  { min: -Infinity, label: "Sangat tidak layak huni", range: "0,00–0,20", color: "#c9895b" },
+  { min: 0.8, label: "Sangat layak huni", range: "0,81 - 1,00", color: "#2e7468" },
+  { min: 0.6, label: "Layak huni", range: "0,61 - 0,80", color: "#6ca77e" },
+  { min: 0.4, label: "Cukup layak huni", range: "0,41 - 0,60", color: "#b8cf8b" },
+  { min: 0.2, label: "Tidak layak huni", range: "0,21 - 0,40", color: "#d8b56a" },
+  { min: -Infinity, label: "Sangat tidak layak huni", range: "0,00 - 0,20", color: "#c9895b" },
 ];
 
 export function classify(score: number) {

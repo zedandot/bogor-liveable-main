@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Basemap, OverlayKey } from "../components/leaflet-map";
 import Map3D from "../components/map-3d";
@@ -22,7 +22,11 @@ import {
 
 const LeafletMap = dynamic(() => import("../components/leaflet-map"), {
   ssr: false,
-  loading: () => <div className="map-canvas" />,
+  loading: () => (
+    <div className="map-canvas map-status-box" role="status" aria-live="polite">
+      <p>Memuat kanvas peta Kota Bogor...</p>
+    </div>
+  ),
 });
 
 const OVERLAY_ITEMS: { key: OverlayKey; label: string; symbol: string }[] = [
@@ -49,8 +53,15 @@ export default function MapPage() {
     jalan: false,
   });
 
-  const [geoData, setGeoData] = useState<FeatureCollection<Geometry, KelurahanProps> | null>(null);
-  const [selectedKode, setSelectedKode] = useState<string | null>(kelurahanData[0]?.kode ?? null);
+  const [geoData, setGeoData] = useState<FeatureCollection<
+    Geometry,
+    KelurahanProps
+  > | null>(null);
+  const [geoLoading, setGeoLoading] = useState(true);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [selectedKode, setSelectedKode] = useState<string | null>(
+    kelurahanData[0]?.kode ?? null
+  );
 
   // Pencarian & filter
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,12 +70,33 @@ export default function MapPage() {
   const [filterKelas, setFilterKelas] = useState("Semua klasifikasi");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const loadGeoData = useCallback(() => {
+    setGeoLoading(true);
+    setGeoError(null);
     fetch("/data/kelurahan.geojson")
-      .then((res) => res.json())
-      .then((fc: FeatureCollection<Geometry, KelurahanProps>) => setGeoData(fc))
-      .catch(() => {});
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Gagal memuat kelurahan.geojson (${res.status})`);
+        }
+        return res.json();
+      })
+      .then((fc: FeatureCollection<Geometry, KelurahanProps>) => {
+        setGeoData(fc);
+        setGeoLoading(false);
+      })
+      .catch((err: unknown) => {
+        setGeoError(
+          err instanceof Error
+            ? err.message
+            : "Tidak dapat memuat data geometri peta."
+        );
+        setGeoLoading(false);
+      });
   }, []);
+
+  useEffect(() => {
+    loadGeoData();
+  }, [loadGeoData]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -102,9 +134,21 @@ export default function MapPage() {
     if (!hasFilter) return null;
 
     const matched = kelurahanData.filter((k) => {
-      if (filterKecamatan !== "Semua kecamatan" && k.kecamatan !== filterKecamatan) return false;
-      if (filterKelurahan !== "Semua kelurahan" && k.kelurahan !== filterKelurahan) return false;
-      if (filterKelas !== "Semua klasifikasi" && classify(k[theme]).label !== filterKelas) return false;
+      if (
+        filterKecamatan !== "Semua kecamatan" &&
+        k.kecamatan !== filterKecamatan
+      )
+        return false;
+      if (
+        filterKelurahan !== "Semua kelurahan" &&
+        k.kelurahan !== filterKelurahan
+      )
+        return false;
+      if (
+        filterKelas !== "Semua klasifikasi" &&
+        classify(k[theme]).label !== filterKelas
+      )
+        return false;
       return true;
     });
     return new Set(matched.map((k) => k.kode));
@@ -150,7 +194,7 @@ export default function MapPage() {
     <div className="map-page">
       <Header />
       <main className="map-workspace">
-        <aside className="map-sidebar">
+        <aside className="map-sidebar" aria-label="Kontrol peta dan filter">
           <div className="map-search">
             <Icon name="search" />
             <input
@@ -160,31 +204,43 @@ export default function MapPage() {
               aria-label="Cari kecamatan atau kelurahan"
               placeholder="Cari kelurahan / kecamatan..."
             />
-            <kbd>⌘ K</kbd>
+            <kbd aria-hidden="true">Ctrl K</kbd>
           </div>
-          {searchMatches.length > 0 && (
-            <div className="search-results">
-              {searchMatches.map((m) => (
-                <button
-                  key={m.kode}
-                  type="button"
-                  onClick={() => {
-                    setSelectedKode(m.kode);
-                    setSearchQuery("");
-                  }}
-                >
-                  <div>
-                    <b>{m.kelurahan}</b>
-                    <small>{m.kecamatan} · #{m.peringkat}</small>
-                  </div>
-                  <strong>{fmt(m[theme])}</strong>
-                </button>
-              ))}
+          {searchQuery.trim().length > 0 && (
+            <div className="search-results" role="region" aria-label="Hasil pencarian">
+              {searchMatches.length > 0 ? (
+                searchMatches.map((m) => (
+                  <button
+                    key={m.kode}
+                    type="button"
+                    onClick={() => {
+                      setSelectedKode(m.kode);
+                      setSearchQuery("");
+                    }}
+                  >
+                    <div>
+                      <b>{m.kelurahan}</b>
+                      <small>
+                        {m.kecamatan} · #{m.peringkat}
+                      </small>
+                    </div>
+                    <strong>{fmt(m[theme])}</strong>
+                  </button>
+                ))
+              ) : (
+                <div className="search-empty">
+                  Tidak ada kelurahan yang cocok dengan &ldquo;{searchQuery}
+                  &rdquo;.
+                </div>
+              )}
             </div>
           )}
 
-          <div className="map-tabs">
+          <div className="map-tabs" role="tablist" aria-label="Mode panel">
             <button
+              type="button"
+              role="tab"
+              aria-selected={panel === "layers"}
               className={panel === "layers" ? "active" : ""}
               onClick={() => setPanel("layers")}
             >
@@ -192,6 +248,9 @@ export default function MapPage() {
               Layer
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={panel === "filters"}
               className={panel === "filters" ? "active" : ""}
               onClick={() => setPanel("filters")}
             >
@@ -202,9 +261,12 @@ export default function MapPage() {
 
           {panel === "layers" ? (
             <div className="layer-list">
-              <p className="control-label">Peta tematik</p>
-              <label className="select-wrap">
+              <label className="control-label" htmlFor="theme-select">
+                Peta tematik
+              </label>
+              <div className="select-wrap">
                 <select
+                  id="theme-select"
                   value={theme}
                   onChange={(e) => setTheme(e.target.value as ThemeKey)}
                 >
@@ -214,21 +276,24 @@ export default function MapPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
 
-              <div className="opacity-row">
+              <label className="opacity-row">
                 <span>Transparansi poligon</span>
                 <strong>{Math.round(fillOpacity * 100)}%</strong>
                 <input
                   type="range"
                   min={15}
                   max={95}
+                  aria-label="Transparansi poligon"
                   value={Math.round(fillOpacity * 100)}
-                  onChange={(e) => setFillOpacity(Number(e.target.value) / 100)}
+                  onChange={(e) =>
+                    setFillOpacity(Number(e.target.value) / 100)
+                  }
                 />
-              </div>
+              </label>
 
-              <p className="control-label">Layer & label daerah</p>
+              <p className="control-label">Layer &amp; label daerah</p>
               {OVERLAY_ITEMS.map((item) => (
                 <label className="toggle-row" key={item.key}>
                   <span>
@@ -248,7 +313,9 @@ export default function MapPage() {
               <div className="basemap-grid">
                 <button
                   type="button"
-                  className={basemap === "light" && viewMode === "2d" ? "active" : ""}
+                  className={
+                    basemap === "light" && viewMode === "2d" ? "active" : ""
+                  }
                   onClick={() => {
                     setViewMode("2d");
                     switchBasemap("light");
@@ -259,7 +326,9 @@ export default function MapPage() {
                 </button>
                 <button
                   type="button"
-                  className={basemap === "satellite" && viewMode === "2d" ? "active" : ""}
+                  className={
+                    basemap === "satellite" && viewMode === "2d" ? "active" : ""
+                  }
                   onClick={() => {
                     setViewMode("2d");
                     switchBasemap("satellite");
@@ -270,7 +339,9 @@ export default function MapPage() {
                 </button>
                 <button
                   type="button"
-                  className={basemap === "osm" && viewMode === "2d" ? "active" : ""}
+                  className={
+                    basemap === "osm" && viewMode === "2d" ? "active" : ""
+                  }
                   onClick={() => {
                     setViewMode("2d");
                     switchBasemap("osm");
@@ -281,7 +352,9 @@ export default function MapPage() {
                 </button>
                 <button
                   type="button"
-                  className={basemap === "topo" && viewMode === "2d" ? "active" : ""}
+                  className={
+                    basemap === "topo" && viewMode === "2d" ? "active" : ""
+                  }
                   onClick={() => {
                     setViewMode("2d");
                     switchBasemap("topo");
@@ -360,31 +433,57 @@ export default function MapPage() {
           )}
         </aside>
 
-        <section className="interactive-map">
-          {geoData ? (
-            viewMode === "3d" ? (
-              <Map3D
-                data={geoData}
-                theme={theme}
-                selectedKode={selectedKode}
-                visibleKodes={visibleKodes}
-                showLabels={overlays.labels}
-                onSelect={setSelectedKode}
-              />
-            ) : (
-              <LeafletMap
-                data={geoData}
-                theme={theme}
-                overlays={overlays}
-                basemap={basemap}
-                fillOpacity={fillOpacity}
-                selectedKode={selectedKode}
-                visibleKodes={visibleKodes}
-                onSelect={setSelectedKode}
-              />
-            )
+        <section className="interactive-map" aria-label="Peta interaktif Kota Bogor">
+          {geoError ? (
+            <div className="map-canvas map-status-box" role="alert">
+              <p>
+                <b>Gagal memuat geometri peta.</b> {geoError}
+              </p>
+              <button
+                type="button"
+                className="button button-small"
+                onClick={loadGeoData}
+              >
+                Coba muat ulang
+              </button>
+            </div>
+          ) : geoLoading || !geoData ? (
+            <div
+              className="map-canvas map-status-box"
+              role="status"
+              aria-live="polite"
+            >
+              <p>Memuat geometri 68 kelurahan Kota Bogor...</p>
+            </div>
+          ) : viewMode === "3d" ? (
+            <Map3D
+              data={geoData}
+              theme={theme}
+              selectedKode={selectedKode}
+              visibleKodes={visibleKodes}
+              showLabels={overlays.labels}
+              onSelect={setSelectedKode}
+            />
           ) : (
-            <div className="map-canvas" />
+            <LeafletMap
+              data={geoData}
+              theme={theme}
+              overlays={overlays}
+              basemap={basemap}
+              fillOpacity={fillOpacity}
+              selectedKode={selectedKode}
+              visibleKodes={visibleKodes}
+              onSelect={setSelectedKode}
+            />
+          )}
+
+          {visibleKodes && visibleKodes.size === 0 && (
+            <div className="map-empty-filter" role="status">
+              <span>Tidak ada kelurahan yang cocok dengan kombinasi filter.</span>
+              <button type="button" onClick={resetFilters}>
+                Reset filter
+              </button>
+            </div>
           )}
 
           <div className="map-topbar">
@@ -393,7 +492,7 @@ export default function MapPage() {
               {currentTheme.label}
             </span>
 
-            <div className="mode-switch">
+            <div className="mode-switch" role="group" aria-label="Mode tampilan peta">
               <button
                 type="button"
                 className={viewMode === "2d" ? "active" : ""}
@@ -420,11 +519,12 @@ export default function MapPage() {
         </section>
 
         {selectedPlace && (
-          <aside className="place-panel">
+          <aside className="place-panel" aria-label="Detail kelurahan terpilih">
             <button
+              type="button"
               className="panel-close"
               onClick={() => setSelectedKode(null)}
-              aria-label="Tutup panel"
+              aria-label="Tutup panel detail kelurahan"
             >
               ×
             </button>
@@ -477,7 +577,10 @@ export default function MapPage() {
                 <div>
                   <span>Kepadatan</span>
                   <b>
-                    {Math.round(selectedPlace.kepadatan_jiwa_km2).toLocaleString("id-ID")} jiwa/km²
+                    {Math.round(
+                      selectedPlace.kepadatan_jiwa_km2
+                    ).toLocaleString("id-ID")}{" "}
+                    jiwa/km²
                   </b>
                 </div>
                 <div>
@@ -490,11 +593,13 @@ export default function MapPage() {
                 className="button full"
                 href={`/wilayah/${slugify(selectedPlace.kelurahan)}`}
               >
-                Lihat detail wilayah <Icon name="arrow" />
+                Lihat profil lengkap <Icon name="arrow" />
               </Link>
               <Link
                 className="compare-add"
-                href={`/perbandingan?a=${encodeURIComponent(selectedPlace.kelurahan)}`}
+                href={`/perbandingan?a=${encodeURIComponent(
+                  selectedPlace.kelurahan
+                )}`}
               >
                 <Icon name="compare" />
                 Bandingkan kelurahan ini
