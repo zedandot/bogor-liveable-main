@@ -1,0 +1,6 @@
+import Link from "next/link";
+import { Icon, Logo } from "../../components/ui";
+
+export default function LoginPage(){
+  return <main className="login-page"><section className="login-visual"><Logo light/><div><p className="eyebrow">Portal pengelola data</p><h1>Jaga data kota<br/>tetap dapat dipercaya.</h1><p>Perbarui indikator, telusuri riwayat perubahan, dan hitung ulang indeks dari satu tempat.</p></div><blockquote>“Kota yang baik dimulai dari data yang dibaca dengan jernih.”</blockquote></section><section className="login-form-wrap"><form><Link className="back-link" href="/"><span>←</span>Kembali ke situs</Link><div><p className="eyebrow">Akses terbatas</p><h2>Masuk sebagai admin</h2><p>Gunakan akun yang disediakan pengelola sistem.</p></div><label>Alamat email<input type="email" defaultValue="admin@ruangbogor.id"/></label><label>Kata sandi<div className="password-field"><input type="password" defaultValue="password123"/><button type="button">Lihat</button></div></label><label className="remember"><input type="checkbox" defaultChecked/>Ingat saya di perangkat ini</label><Link className="button full" href="/admin">Masuk ke dashboard <Icon name="arrow"/></Link><small><Icon name="info" size={14}/>Akses dan aktivitas admin dicatat untuk keamanan data.</small></form></section></main>;
+}

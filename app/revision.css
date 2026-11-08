@@ -1,0 +1,36 @@
+/* Revised landing composition: watercolor Bogor panorama with a framed product window. */
+html,body{overflow-x:hidden}
+.landing-wash{min-height:910px;padding:0;background:#fffefa}
+.landing-wash:before{display:none}
+.landing-wash:after{display:none}
+.landing-wash>.site-header{max-width:none;margin:0;height:76px;border:0;border-bottom:1px solid #dce5df;background:rgba(255,254,250,.97);border-radius:0;box-shadow:none}
+.landing-wash>main{max-width:none;background:#fffefa;border-radius:0;overflow:hidden;box-shadow:none}
+.landing-wash .hero{display:block;min-height:705px;padding:65px 40px 0;position:relative;overflow:hidden}
+.landing-wash .hero-copy{position:relative;z-index:4;max-width:800px;margin:auto;padding:0;text-align:center}
+.landing-wash .hero-kicker{justify-content:center;margin-bottom:18px}
+.landing-wash .hero h1{font-size:56px;line-height:1.03;margin-bottom:16px}
+.landing-wash .hero-copy>p:not(.hero-kicker){max-width:690px;margin:0 auto;font-size:16px;line-height:1.55}
+.landing-wash .hero-actions{justify-content:center;margin-top:23px}
+.hero-city-art{position:absolute;z-index:1;left:0;right:0;bottom:0;height:58%;background:url("/bogor-watercolor.png") center 63%/cover no-repeat}
+.hero-city-art:before{content:"";position:absolute;inset:0;background:linear-gradient(#fffefa 0%,rgba(255,254,250,.84) 8%,transparent 38%)}
+.hero-app-preview{position:absolute;z-index:5;width:min(880px,80%);height:236px;left:50%;bottom:-64px;transform:translateX(-50%);background:rgba(255,254,250,.96);border:1px solid rgba(255,255,255,.75);border-radius:15px 15px 0 0;box-shadow:0 20px 48px rgba(15,55,48,.25);overflow:hidden}
+.preview-bar{height:48px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);font-size:11px}
+.preview-bar>span{font-size:13px}.preview-bar>span i{display:inline-block;width:3px;height:12px;margin-right:2px;background:var(--green);transform:skew(-12deg)}.preview-bar nav{color:var(--muted)}.preview-bar small{padding:5px 8px;border-radius:16px;background:#e2ece5;color:var(--green)}
+.preview-body{display:grid;grid-template-columns:1.55fr .75fr;height:188px}.preview-map{min-width:0}.preview-map .map-canvas{height:100%}.preview-summary{padding:17px 20px;border-left:1px solid var(--line)}.preview-summary .eyebrow{font-size:9px;margin-bottom:3px}.preview-summary h3{font-family:var(--serif);font-size:22px;font-weight:400;margin:0}.preview-summary>span{font-size:9px;color:var(--muted)}.preview-summary>div{display:flex;align-items:center;gap:10px;margin:6px 0}.preview-summary strong{font-family:var(--serif);font-size:29px;font-weight:400}.preview-summary small{font-size:8px;color:var(--muted);line-height:1.4}.preview-summary ul{list-style:none;padding:0;margin:5px 0}.preview-summary li{display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--line);font-size:8px}.preview-summary>a{display:flex;align-items:center;justify-content:space-between;margin-top:7px;color:var(--green);font-size:9px;font-weight:700}
+.landing-wash .city-strip{max-width:1184px;height:130px;padding-top:60px;margin:0 auto}
+
+/* Larger type scale for data-heavy and admin pages. */
+.main-nav a,.text-link{font-size:14px}.button,.quiet-button{font-size:14px}.eyebrow{font-size:13px}.page-intro>div>p:last-child{font-size:16px}.breadcrumb{font-size:12px}
+.stat-cards span,.stat-cards small{font-size:11px}.stat-cards b{font-size:13px}.dashboard-panel header button,.data-note,.panel-legend{font-size:11px}.dimensions-panel .big-bar{font-size:13px}.district-table>div{font-size:13px}.district-table>div:first-child{font-size:11px}.status-pill{font-size:10px}
+.ranking-summary span,.ranking-summary p,.ranking-summary small{font-size:11px}.table-controls input,.table-controls select,.ranking-table .table-row{font-size:12px}.ranking-table .table-head{font-size:10px}.pagination{font-size:11px}
+.compare-picker label>span{font-size:11px}.compare-hero p,.compare-hero article small,.compare-hero>div span,.compare-hero>div small{font-size:11px}.compare-hero article span{font-size:13px}.versus-row>strong{font-size:13px}.versus-row>strong small,.compare-table>div strong small,.compare-table>div i{font-size:10px}
+.sensitivity-note p,.weight-row>span,.simulation-callout b,.simulation-ranking>div{font-size:12px}.weight-panel header p,.simulation-map header>span,.simulation-callout small{font-size:10px}
+.detail-score>span,.detail-score small,.detail-stats span,.detail-stats small,.dimension-detail-grid p{font-size:11px}.detail-score b{font-size:14px}.dimension-detail-grid small{font-size:10px}.data-table .table-head{font-size:11px}.data-table .table-row{font-size:12px}
+.method-steps p,.classification-section>div:first-child>p:last-child{font-size:13px}.method-hero span,.method-hero small,.source-grid p,.source-grid small{font-size:10px}.source-grid h3{font-size:13px}.method-note p{font-size:12px}
+.assistant-aside>div:first-child>p:last-child{font-size:14px}.assistant-scope span{font-size:12px}.assistant-aside>small{font-size:11px}.chat-empty>p,.prompt-examples button,.chat-input input,.message{font-size:13px}.chat-input small,.message small{font-size:10px}
+.admin-sidebar nav a,.admin-sidebar-bottom a,.admin-profile b{font-size:12px}.admin-profile small{font-size:10px}.admin-header>div>p:last-child{font-size:13px}.admin-alert b{font-size:12px}.admin-alert p,.admin-alert button{font-size:10px}.admin-stats span,.admin-stats small{font-size:11px}.admin-panel header a,.activity-panel p b{font-size:11px}.activity-panel p small,.activity-panel>div>i,.completion-legend span,.district-admin>div{font-size:10px}.completion-ring span{font-size:9px}
+.data-toolbar input,.data-toolbar select,.data-toolbar button{font-size:11px}.admin-data-table .table-head{font-size:10px}.admin-data-table .table-row{font-size:11px}.edit-breadcrumb{font-size:11px}.edit-form section header>span,.form-grid label,.period-checks span,.period-help>div b{font-size:11px}.form-grid label small,.period-checks small,.period-help>div span{font-size:9px}.edit-actions p,.period-help p,.history-list>div,.audit-note p{font-size:11px}.history-list .history-head{font-size:10px}
+.login-form-wrap label,.back-link{font-size:11px}.login-form-wrap form>div>p:last-child{font-size:13px}.login-form-wrap form>small{font-size:10px}
+
+@media(max-width:1000px){.landing-wash{min-height:900px;padding:0}.landing-wash .hero{min-height:700px}.landing-wash .hero h1{font-size:50px}.landing-wash .city-strip{height:140px;margin:0 24px}.hero-app-preview{width:88%}}
+@media(max-width:700px){.landing-wash{padding:0;min-height:850px}.landing-wash>.site-header{border-radius:0}.landing-wash .hero{min-height:690px;padding:48px 20px 0}.landing-wash .hero h1{font-size:39px}.landing-wash .hero-copy>p:not(.hero-kicker){font-size:14px}.hero-city-art{height:55%}.hero-app-preview{width:92%;height:205px;bottom:-45px}.preview-body{height:158px;grid-template-columns:1fr}.preview-summary{display:none}.landing-wash .city-strip{padding-top:45px;height:150px;margin:0 16px}.preview-bar nav{display:none}}
