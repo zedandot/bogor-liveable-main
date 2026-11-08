@@ -25,46 +25,36 @@ function canTransitionDisplay(): boolean {
 
 export function SplashLoader() {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<"in" | "out" | "hidden">("in");
 
   useEffect(() => {
+    // Jalankan sekali per session agar tidak mengganggu saat refresh/dev
+    if (typeof window !== "undefined" && sessionStorage.getItem("rb_splash_seen") === "1") {
+      document.documentElement.dataset.splash = "done";
+      setPhase("hidden");
+      return;
+    }
+
     const html = document.documentElement;
     html.dataset.splash = "active";
 
-    const start = performance.now();
-    const duration = 1350; // ms for 0 -> 100% fade-in & counter
-    let rafId = 0;
-
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const t = Math.min(elapsed / duration, 1);
-      // Cubic ease-out counter
-      const eased = 1 - Math.pow(1 - t, 3);
-      setProgress(Math.round(eased * 100));
-      if (t < 1) {
-        rafId = requestAnimationFrame(tick);
-      }
-    };
-    rafId = requestAnimationFrame(tick);
-
+    // Durasi cepat & snappy: ~650ms sebelum meluncur keluar
     const exitTimer = window.setTimeout(() => {
       triggerExit();
-    }, 1500);
+    }, 650);
 
-    return () => {
-      cancelAnimationFrame(rafId);
-      clearTimeout(exitTimer);
-    };
+    return () => clearTimeout(exitTimer);
   }, []);
 
   const triggerExit = async () => {
     const el = rootRef.current;
     if (!el || phase !== "in") return;
 
-    setProgress(100);
     setPhase("out");
     document.documentElement.dataset.splash = "exiting";
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("rb_splash_seen", "1");
+    }
 
     if (canTransitionDisplay()) {
       el.hidden = true;
@@ -76,7 +66,7 @@ export function SplashLoader() {
     if (animations.length > 0) {
       await Promise.race([
         Promise.allSettled(animations.map((a) => a.finished)),
-        new Promise((r) => setTimeout(r, 1400)),
+        new Promise((r) => setTimeout(r, 850)),
       ]);
     }
 
@@ -91,90 +81,38 @@ export function SplashLoader() {
 
   if (phase === "hidden") return null;
 
-  const kelCount = Math.round((progress / 100) * 68);
-
   return (
     <div
       ref={rootRef}
       className="rb-splash"
       role="status"
       aria-live="polite"
-      aria-label="Memuat Ruang Bogor"
+      aria-label="Ruang Bogor"
+      onClick={triggerExit}
     >
-      {/* Background layer that slides UP when exiting */}
-      <div className="rb-splash-bg-up" aria-hidden="true">
-        <div className="rb-splash-watercolor-echo" />
-        <svg
-          className="rb-splash-topo"
-          viewBox="0 0 800 800"
-          fill="none"
-          aria-hidden="true"
-        >
-          <circle cx="400" cy="400" r="140" />
-          <circle cx="400" cy="400" r="230" />
-          <circle cx="400" cy="400" r="320" />
-          <circle cx="400" cy="400" r="410" />
-          <line x1="400" y1="0" x2="400" y2="800" />
-          <line x1="0" y1="400" x2="800" y2="400" />
-        </svg>
-      </div>
+      {/* Background layer: meluncur ke ATAS saat keluar */}
+      <div className="rb-splash-bg-up" aria-hidden="true" />
 
-      {/* Foreground panel that fades IN initially, then slides LEFT on exit */}
+      {/* Foreground panel: meluncur ke KIRI saat keluar */}
       <div className="rb-splash-stage-left">
         <div className="rb-splash-inner">
-          <div className="rb-splash-kicker">
-            <span className="rb-splash-dot" />
-            Spatial Decision Support System · Kota Bogor
+          <div className="rb-splash-coords">
+            06° 35′ 49″ S · 106° 47′ 55″ E
           </div>
 
-          <div className="rb-splash-brand">
-            <span className="rb-splash-mark" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="rb-splash-word">
-              ruang<b>bogor</b>
-            </span>
-          </div>
+          <h1 className="rb-splash-title">
+            RUANG BOGOR
+          </h1>
 
-          <p className="rb-splash-tagline">
-            Memetakan <em>68 kelurahan</em> &amp; <em>6 kecamatan</em> di Kota
-            Hujan
-          </p>
+          <div className="rb-splash-line" aria-hidden="true" />
 
-          <div className="rb-splash-progress-wrap">
-            <div className="rb-splash-progress-meta">
-              <span>Memuat geometri &amp; 6 dimensi kelayakhunian</span>
-              <b>
-                {kelCount}/68 kelurahan · {progress}%
-              </b>
-            </div>
-            <div className="rb-splash-progress-track">
-              <i style={{ transform: `scaleX(${progress / 100})` }} />
-            </div>
-          </div>
-
-          <div className="rb-splash-dims" aria-hidden="true">
-            <span>Kesehatan</span>
-            <span>Pendidikan</span>
-            <span>Lingkungan</span>
-            <span>Transportasi</span>
-            <span>Ekonomi</span>
-            <span>Sosial</span>
+          <div className="rb-splash-meta">
+            <span>68 KELURAHAN</span>
+            <span className="rb-splash-sep">/</span>
+            <span>6 KECAMATAN</span>
           </div>
         </div>
-
-        <button
-          type="button"
-          className="rb-splash-skip"
-          onClick={triggerExit}
-          aria-label="Lewati animasi pembuka"
-        >
-          Lewati →
-        </button>
       </div>
     </div>
   );
 }
-

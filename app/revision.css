@@ -1106,19 +1106,21 @@ html, body {
 }
 
 /* =========================================================
-   RUANG BOGOR SPLASH LOADER (Fade-In -> Slide-Left + Bg Slide-Up -> Web Slide-Up)
+   RUANG BOGOR SPLASH LOADER (Minimalist Editorial Curtain)
    ========================================================= */
 
 .rb-splash {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 99999;
   display: grid;
   pointer-events: auto;
   overflow: hidden;
+  cursor: pointer;
+  background: transparent;
   transition:
-    display 0.9s,
-    overlay 0.9s;
+    display 0.7s,
+    overlay 0.7s;
   transition-behavior: allow-discrete;
 }
 
@@ -1130,300 +1132,121 @@ html, body {
   pointer-events: none;
 }
 
-/* Background layer that slides UP on exit */
+/* Background curtain: deep forest tone, slides UP on exit */
 .rb-splash-bg-up {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(180deg, #dcece4 0%, #eef5f0 55%, #f5f3ed 100%);
-  overflow: hidden;
-  opacity: 1;
+  background: #0f2420;
   translate: 0 0;
-  transition:
-    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
-    translate 0.85s cubic-bezier(0.65, 0, 0.35, 1) 0.06s;
+  transition: translate 0.65s cubic-bezier(0.76, 0, 0.24, 1) 0.04s;
 }
 
-.rb-splash-watercolor-echo {
-  position: absolute;
-  inset: 0;
-  background: url("/bogor-watercolor.png") center 28% / cover no-repeat;
-  opacity: 0.32;
-  scale: 1.04;
-  transition: scale 1.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.rb-splash-topo {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(88vw, 760px);
-  height: min(88vw, 760px);
-  translate: -50% -50%;
-  stroke: rgba(15, 63, 56, 0.14);
-  stroke-width: 1;
-  stroke-dasharray: 5 7;
-  animation: rbTopoSpin 38s linear infinite;
-}
-
-@keyframes rbTopoSpin {
-  to {
-    rotate: 360deg;
-  }
-}
-
-/* Foreground brand panel: Fade-IN on mount, Slide-LEFT on exit */
+/* Foreground curtain: deep obsidian matte, slides LEFT on exit */
 .rb-splash-stage-left {
   position: relative;
   z-index: 2;
   display: grid;
   place-items: center;
-  padding: 32px 24px;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(47, 133, 90, 0.28), transparent 52%),
-    radial-gradient(circle at 82% 80%, rgba(196, 146, 75, 0.18), transparent 48%),
-    linear-gradient(135deg, #0b2e2a 0%, #13463f 56%, #1b5a50 100%);
-  color: #fffefa;
-  box-shadow: 24px 0 60px rgba(8, 28, 25, 0.32);
-  opacity: 1;
-  scale: 1;
+  background: #080d0c;
+  color: #f7f7f5;
   translate: 0 0;
+  opacity: 1;
   transition:
-    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    scale 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-    translate 0.78s cubic-bezier(0.65, 0, 0.35, 1);
+    translate 0.62s cubic-bezier(0.76, 0, 0.24, 1),
+    opacity 0.35s ease 0.22s;
 }
 
 .rb-splash-inner {
-  width: min(520px, 92vw);
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 12px;
   text-align: center;
-  gap: 18px;
-  opacity: 1;
-  translate: 0 0;
-  transition:
-    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
-    translate 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
+  padding: 0 24px;
 }
 
-.rb-splash-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(255, 254, 250, 0.08);
-  border: 1px solid rgba(255, 254, 250, 0.16);
-  color: rgba(255, 254, 250, 0.84);
+.rb-splash-coords {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.28em;
+  color: #607b74;
   text-transform: uppercase;
 }
 
-.rb-splash-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: #52d19c;
-  box-shadow: 0 0 0 5px rgba(82, 209, 156, 0.2);
+.rb-splash-title {
+  margin: 0;
+  font-family: var(--font-display), "Cinzel", "Times New Roman", Georgia, serif;
+  font-size: clamp(34px, 5.5vw, 54px);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: #ffffff;
+  line-height: 1;
 }
 
-.rb-splash-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 4px;
+.rb-splash-line {
+  width: min(180px, 50vw);
+  height: 1px;
+  background: #274840;
+  transform-origin: center;
+  animation: rbLineExpand 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.rb-splash-mark {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 36px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(255, 254, 250, 0.11);
-  border: 1px solid rgba(255, 254, 250, 0.2);
-}
-
-.rb-splash-mark i {
-  display: block;
-  width: 5px;
-  border-radius: 3px;
-  background: #6ee7b7;
-  transform-origin: bottom;
-  animation: rbBarPulse 1.2s ease-in-out infinite alternate;
-}
-
-.rb-splash-mark i:nth-child(1) {
-  height: 14px;
-  animation-delay: 0s;
-}
-
-.rb-splash-mark i:nth-child(2) {
-  height: 22px;
-  background: #fbbf24;
-  animation-delay: 0.15s;
-}
-
-.rb-splash-mark i:nth-child(3) {
-  height: 18px;
-  animation-delay: 0.3s;
-}
-
-@keyframes rbBarPulse {
+@keyframes rbLineExpand {
   from {
-    scale: 1 0.72;
+    transform: scaleX(0);
   }
   to {
-    scale: 1 1.08;
+    transform: scaleX(1);
   }
 }
 
-.rb-splash-word {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(36px, 6vw, 54px);
-  font-weight: 400;
-  letter-spacing: -0.025em;
-  line-height: 1;
-  color: #fffefa;
-}
-
-.rb-splash-word b {
-  font-weight: 600;
-  color: #86efac;
-}
-
-.rb-splash-tagline {
-  margin: 0;
-  font-size: 15px;
-  color: rgba(255, 254, 250, 0.8);
-  line-height: 1.5;
-}
-
-.rb-splash-tagline em {
-  font-style: normal;
-  color: #fde68a;
-  font-weight: 600;
-}
-
-.rb-splash-progress-wrap {
-  width: 100%;
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rb-splash-progress-meta {
-  display: flex;
-  justify-content: space-between;
+.rb-splash-meta {
+  display: inline-flex;
   align-items: center;
-  font-size: 12px;
-  color: rgba(255, 254, 250, 0.75);
+  gap: 10px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: #8fa7a1;
 }
 
-.rb-splash-progress-meta b {
-  font-family: var(--font-mono), monospace;
-  font-size: 12px;
-  color: #a7f3d0;
+.rb-splash-sep {
+  color: #2e4d46;
 }
 
-.rb-splash-progress-track {
-  width: 100%;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 254, 250, 0.14);
-  overflow: hidden;
-}
-
-.rb-splash-progress-track i {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #34d399 0%, #fbbf24 100%);
-  transform-origin: left center;
-  transition: transform 0.08s linear;
-}
-
-.rb-splash-dims {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.rb-splash-dims span {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: rgba(255, 254, 250, 0.07);
-  border: 1px solid rgba(255, 254, 250, 0.12);
-  color: rgba(255, 254, 250, 0.72);
-}
-
-.rb-splash-skip {
-  position: absolute;
-  right: 24px;
-  bottom: 24px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 254, 250, 0.22);
-  background: rgba(255, 254, 250, 0.08);
-  color: #fffefa;
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.rb-splash-skip:hover {
-  background: rgba(255, 254, 250, 0.18);
-  transform: translateX(2px);
-}
-
-/* Entry animation: top-level @starting-style (fade in) */
+/* Entry animation: top-level @starting-style */
 @starting-style {
   .rb-splash-stage-left {
     opacity: 0;
-    scale: 0.975;
   }
   .rb-splash-inner {
     opacity: 0;
-    translate: 0 14px;
-  }
-  .rb-splash-bg-up {
-    opacity: 0;
+    transform: translateY(6px);
   }
 }
 
-/* Exit animation: Foreground slides LEFT, Background slides UP */
+/* Exit choreography: Foreground meluncur KIRI, Background meluncur ATAS */
 .rb-splash:where([hidden], [data-closing]) .rb-splash-stage-left {
-  translate: -104% 0;
+  translate: -100% 0;
 }
 
 .rb-splash:where([hidden], [data-closing]) .rb-splash-bg-up {
-  translate: 0 -104%;
-  opacity: 0.92;
+  translate: 0 -100%;
 }
 
-/* Main website stage: slides UP into place as the splash exits */
+/* Main website stage: fluid slide up as curtain parts */
 .rb-site-stage {
   opacity: 1;
   translate: 0 0;
   transition:
-    opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
-    translate 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    translate 0.65s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html[data-splash="active"] .rb-site-stage {
-  opacity: 0.01;
-  translate: 0 48px;
+  opacity: 0.05;
+  translate: 0 20px;
 }
 
 html[data-splash="exiting"] .rb-site-stage,
@@ -1435,15 +1258,11 @@ html[data-splash="done"] .rb-site-stage {
 @media (prefers-reduced-motion: reduce) {
   .rb-splash-bg-up,
   .rb-splash-stage-left,
-  .rb-splash-inner,
   .rb-site-stage {
-    transition-duration: 0.15s !important;
-    transition-delay: 0s !important;
+    transition: none !important;
     translate: none !important;
-    scale: none !important;
   }
-  .rb-splash-topo,
-  .rb-splash-mark i {
+  .rb-splash-line {
     animation: none !important;
   }
 }
